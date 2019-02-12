@@ -1,4 +1,3 @@
-#!/usr/local/bin/cl
 ;; -*- mode:lisp;coding:utf-8 -*-
 (defun main (arguments)
   (declare (ignore arguments))

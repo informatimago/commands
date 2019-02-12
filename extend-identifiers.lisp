@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 ;; Converts a utf-8 C++ source into an ASCII one using extended characters.

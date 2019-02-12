@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8 -on-error debug
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 ;;;;*****************************************************************************
 ;;;;FILE:              rotate

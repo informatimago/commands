@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E iso-8859-1
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 (defun entropy (histogram total)

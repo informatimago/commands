@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 ;;;;******************************************************************************
 ;;;;FILE:              shell
@@ -2795,7 +2794,6 @@ IMMIG:NOV.13 1932
 
 (defparameter *revolution*
   '("
-#!/usr/bin/ksh
 # $Id: csrvc,v 1.1 22:30:47 sms Exp $
 # Shell script to connect to 8397/37 by PPP
 
@@ -2880,7 +2878,6 @@ DAVID STOCKTON
 "
 
     "
-#!/usr/bin/ksh
 # $Id: csrvc,v 2.1 25:12:54 sms Exp $
 # Shell script to connect to 16654/70 by PPP
 
@@ -2899,7 +2896,6 @@ Retrying...
 "
 
     "
-#!/usr/bin/ksh
 # $Id: csrvc,v 2.1 25:12:54 sms Exp $
 # Shell script to connect to 16654/70 by PPP
 

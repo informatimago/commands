@@ -1,4 +1,3 @@
-#!/usr/local/bin/cl
 ;; -*- mode:lisp;coding:utf-8 -*-
 
 ;; emerge all the packages specified in /home/pjb/portage-packages.txt, in batch(1).

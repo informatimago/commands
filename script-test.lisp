@@ -1,4 +1,3 @@
-#!/usr/local/bin/cl -v -Q -s cffi
 ;; -*- mode:lisp; coding:utf-8 -*-
 ;; 
 ;; (cffi:defcvar (environ "environ") :pointer)

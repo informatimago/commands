@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 (setf *read-base* 16.)

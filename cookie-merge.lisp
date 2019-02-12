@@ -1,4 +1,3 @@
-#!/usr/local/bin/cl
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 (in-package "COMMON-LISP-USER")
 ;; (load (make-pathname :name "SCRIPT" :type "LISP" :version NIL :case :common :defaults *load-pathname*))

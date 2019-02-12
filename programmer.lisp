@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 ;; Clean the packages imported into COMMON-LISP-USER:

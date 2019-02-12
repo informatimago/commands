@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -q -ansi -norc
 ;; -*- mode:lisp;coding:utf-8 -*-
 
 (defun make-pathname* (&key (host nil hostp) (device nil devicep) (directory nil directoryp)

@@ -112,7 +112,6 @@ hw-lisp-clisp:generate-hw.lisp generate.lisp hw.lisp
 
 hw-lisp-clisp-fas:Makefile hw.fas
 	@printf "// Generating Executable from %s source: %s\n" "Lisp" $@
-	@(echo '#!/usr/local/bin/clisp -ansi -q -E utf-8' ;\
 	  cat hw.fas  ;\
 	  echo '(defun argv () (cons (elt (ext:argv) 0) ext:*args*))' ;\
 	  echo '(defun start () ' ;\

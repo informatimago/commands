@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi --quiet --silent -E utf-8
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 (let* ((*standard-output* (make-broadcast-stream)))
  (load #P"~/quicklisp/setup.lisp"))

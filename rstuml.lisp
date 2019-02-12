@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E utf-8
 ;; -*- mode:lisp; coding:iso-8859-1 -*-
 
 (defparameter *base-url* "http://hubble:3000/diagram/")

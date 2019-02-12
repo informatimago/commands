@@ -1,4 +1,3 @@
-#!/usr/local/bin/clisp -ansi -q -E iso-8859-1
 ;;;; -*- mode:lisp; coding:iso-8859-1 -*-
 
 ;; prefix each line of input with its length.

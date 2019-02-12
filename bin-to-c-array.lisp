@@ -1,4 +1,3 @@
-#!/usr/local/bin/cl
 ;; -*- mode:lisp; coding:utf-8 -*-
 
 ;; Note: xxd -i does about the same.
