@@ -1,10 +1,12 @@
+FUTURE_PROGRAMS= \
+	box \
+
 ALL_PROGRAMS=   \
 	add-cookie \
 	add-paths \
 	ansi-test \
 	batch-emerge \
 	bin-to-c-array \
-	box \
 	buzzword \
 	capitalize \
 	cddb-to-tag \
@@ -153,4 +155,4 @@ test:$(ALL_PROGRAMS)
 	@ls -l $(ALL_PROGRAMS)
 
 clean:
-	-rm -f $(ALL_PROGRAMS) *.o *.fas *.lib *.log
+	-rm -f $(ALL_PROGRAMS) *.o *.fas *.lib *.log *.dx64fsl
