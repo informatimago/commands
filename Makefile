@@ -80,7 +80,8 @@ ALL_PROGRAMS=   \
 	text \
 	when
 
-all:$(ALL_PROGRAMS)
+# all:$(ALL_PROGRAMS)
+all:commands
 
 CLISP=clisp
 CCL=ccl
@@ -91,6 +92,13 @@ LINE="//----------------------------------------------------------------------"
 HERE=$(shell pwd)
 
 .PHONY: all clean test
+
+commands symlink-commands:generate-commands.lisp generate.lisp
+	@printf "// Generating Executable from %s source: %s\n" "Lisp" $@
+	-@rm -rf ~/.cache/common-lisp/ccl-*$(HERE)
+	@$(CCL) -n -l generate-commands.lisp # > commands-lisp-ccl.log 2>&1
+	cp commands symlink-commands bin/
+	chmod 755 bin/symlink-commands
 
 hw-c:hw.c
 	@printf "// Generating Executable from %s source: %s\n" "C" $@
@@ -155,4 +163,5 @@ test:$(ALL_PROGRAMS)
 	@ls -l $(ALL_PROGRAMS)
 
 clean:
-	-rm -f $(ALL_PROGRAMS) *.o *.fas *.lib *.log *.dx64fsl
+	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.dx64fsl \) -exec rm {} +
+#	-rm -f $(ALL_PROGRAMS)

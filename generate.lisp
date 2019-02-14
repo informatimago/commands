@@ -144,6 +144,7 @@
                       system-name system-list
                       source-directory asdf-directories release-directory
                       init-file version copyright))
+
   (say "Quickloading ~S" (cons system-name system-list))
   (multiple-value-bind (output status)
       (ext:run-program (first (argv))
@@ -159,6 +160,14 @@
       (write-string (slurp-stream output)))
     (say "   status ~S" status)))
 
+(defun program-pathname (program-name release-directory)
+  (merge-pathnames (make-pathname :name program-name
+                                  :type :unspecific
+                                  :version :unspecific
+                                  :defaults release-directory)
+                   release-directory
+                   nil))
+
 (defun generate-program (&key program-name main-function
                            system-name system-list
                            source-directory asdf-directories release-directory
@@ -167,31 +176,33 @@
                       system-name system-list
                       version copyright source-directory))
 
-  #+ecl (pre-compile-with-quicklisp program-name main-function
-                                    system-name system-list
-                                    source-directory asdf-directories release-directory
-                                    init-file version copyright)
+  (when system-name
+    #+ecl (pre-compile-with-quicklisp (program-pathname program-name release-directory)
+                                      main-function
+                                      system-name system-list
+                                      source-directory asdf-directories release-directory
+                                      init-file version copyright)
+    #-ecl (load-quicklisp))
 
-  #-ecl (load-quicklisp)
   #+ecl (progn (require 'cmp)
                (say "Requiring ASDF")
                (require 'asdf))
 
   (configure-asdf-directories asdf-directories)
 
-  #-ecl (progn
+  #-ecl (when system-name
           (say "Quickloading system ~A" system-name)
           (funcall (runtime-function "QL:QUICKLOAD") system-name)
           (when system-list
             (say "Quickloading systems ~A" system-list)
             (funcall (runtime-function "QL:QUICKLOAD") system-list)))
 
-  (say "Generating program ~A" (merge-pathnames program-name release-directory))
+  (say "Generating program ~A" (program-pathname program-name release-directory))
 
   #+ccl (progn
           ;; This doesn't return.
           (ccl::save-application
-           (merge-pathnames program-name release-directory  nil)
+           (program-pathname program-name release-directory)
            :toplevel-function (make-toplevel-function main-function nil)
            :init-file init-file
            :mode #o755
@@ -200,7 +211,7 @@
 
   #+clisp (progn
             (ext::saveinitmem
-             (merge-pathnames program-name release-directory  nil)
+             (program-pathname program-name release-directory)
              :executable t
              :norc t
              :quiet t
@@ -225,7 +236,7 @@
                    :epilogue-code (make-toplevel-function main-function init-file)
                    :move-here release-directory)
 
-          #-(and) (progn (c:build-program (merge-pathnames program-name release-directory nil)
+          #-(and) (progn (c:build-program (program-pathname program-name release-directory)
                                           :lisp-files (system-object-files system-name)
                                           :ld-flags '()
                                           :prologue-code ""
@@ -238,10 +249,10 @@
                                               (rest (pathname-directory source-directory)))
                            :name (string-downcase system-name)
                            :type nil)
-                          (merge-pathnames program-name release-directory nil)))
+                          (program-pathname program-name release-directory)))
           (ext:quit 0))
 
-  #+sbcl (sb-ext:save-lisp-and-die program-name
+  #+sbcl (sb-ext:save-lisp-and-die (program-pathname program-name release-directory)
                                    :executable t
                                    :compression 9
                                    :toplevel (make-toplevel-function main-function init-file))

@@ -42,97 +42,6 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-
-;; This file defines several packages:
-;; "COM.INFORMATIMAGO.COMMAND.SCRIPT"
-;; "COM.INFORMATIMAGO.CLISP.VERSION"
-
-;;;---------------------------------------------------------------------------
-;;;
-
-(defpackage "COM.INFORMATIMAGO.CLISP.VERSION"
-  (:nicknames "VERSION")
-  (:use "COMMON-LISP")
-  (:export
-   "CLISP-VERSION"
-   "VERSION="    "VERSION<"    "VERSION<="
-   "RT-VERSION=" "RT-VERSION<" "RT-VERSION<="))
-(in-package "COM.INFORMATIMAGO.CLISP.VERSION")
-
-(defun clisp-version (&optional (version-string (lisp-implementation-version)))
-  (loop
-     :with r = '()
-     :with start = 0
-     :do (multiple-value-bind (n p)
-             (parse-integer version-string :start start :junk-allowed t)
-           (push n r)
-           (if (or (<= (length version-string) p)
-                   (char= #\space (aref version-string p)))
-               (return-from clisp-version (delete nil (nreverse r)))
-               (setf start (1+ p))))))
-
-(defun version= (a b)
-  (equal (if (stringp a) (clisp-version a) a)
-         (if (stringp b) (clisp-version b) b)))
-
-(defun version< (a b)
-  (setf a (if (stringp a) (clisp-version a) a)
-        b (if (stringp b) (clisp-version b) b))
-  (cond
-    ((null a)            (not (null b)))
-    ((null b)            nil)
-    ((< (car a) (car b)) t)
-    ((= (car a) (car b)) (version< (cdr a) (cdr b)))
-    (t                   nil)))
-
-(defun version<= (a b)
-  (setf a (if (stringp a) (clisp-version a) a)
-        b (if (stringp b) (clisp-version b) b))
-  (or (version= a b) (version< a b)))
-
-(defun rt-version=  (a b) (if (version=  a b) '(:and) '(:or)))
-(defun rt-version<  (a b) (if (version<  a b) '(:and) '(:or)))
-(defun rt-version<= (a b) (if (version<= a b) '(:and) '(:or)))
-
-;;;---------------------------------------------------------------------------
-;;;
-
-(defpackage "COM.INFORMATIMAGO.COMMAND.SCRIPT"
-  (:nicknames "SCRIPT")
-  (:use "COMMON-LISP")
-  (:export  "CLEAN-PACKAGE/COMMON-LISP-USER")
-  (:export "*VERBOSE*" "*DEBUG*"
-           "*DEFAULT-PROGRAM-NAME*" "*PROGRAM-NAME*" "*PROGRAM-PATH*" "*ARGUMENTS*"
-
-           "WITHOUT-OUTPUT" "WITH-PAGER"
-           "REDIRECTING-STDOUT-TO-STDERR"
-           "RELAUNCH-WITH-KFULL-LINKSET-IF-NEEDED"
-
-           ;; I/O
-           "PERROR" "PMESSAGE" "PQUERY"
-
-           ;; Options
-           "DEFINE-OPTION" "CALL-OPTION-FUNCTION"
-           "PARSE-OPTIONS"
-           "SET-DOCUMENTATION-TEXT"
-           "*BASH-COMPLETION-HOOK*"
-
-
-           ;; Utilities:
-           "FIND-DIRECTORIES"
-           "CONCAT" "MAPCONCAT"
-
-           "GETPID" "SHELL-QUOTE-ARGUMENT" "SHELL" "EXECUTE" "RUN-PROGRAM"
-           "UNAME" "COPY-FILE"  "MAKE-SYMBOLIC-LINK" "MAKE-DIRECTORY"
-
-           ;; Exit codes:
-           "EX--BASE" "EX--MAX" "EX-CANTCREAT" "EX-CONFIG"
-           "EX-DATAERR" "EX-IOERR" "EX-NOHOST" "EX-NOINPUT"
-           "EX-NOPERM" "EX-NOUSER" "EX-OK" "EX-OSERR" "EX-OSFILE"
-           "EX-PROTOCOL" "EX-SOFTWARE" "EX-TEMPFAIL" "EX-UNAVAILABLE"
-           "EX-USAGE"
-
-           "EXIT"))
 (in-package "COM.INFORMATIMAGO.COMMAND.SCRIPT")
 
 
@@ -400,9 +309,6 @@ If available we use the actual program name (from (EXT:ARGV) or
              ,@body)
          (error (err) (report-the-error err net))))))
 
-
-
-
 (defmacro with-pager ((&key lines) &body body)
   "
 Executes the BODY, redirecting *STANDARD-OUTPUT* to a pager.
@@ -427,10 +333,10 @@ LINES     Number of line to output in a single chunk.
   `(progn ,@body)
   #+clisp
   `(progn
-     #+#.(version:rt-version<= "2.44" (version:clisp-version))
+     #+#.(rt-version<= "2.44" (version))
      ,`(progn ,@body)
-     #-#.(version:rt-version<= "2.44" (version:clisp-version))
-     ,(let ((pager (ext:getenv "PAGER")))
+     #-#.(rt-version<= "2.44" (version))
+     ,(let ((pager (uiop:getenv "PAGER")))
        (if pager
            (let ((pager-stream (gensym)))
              `(let ((,pager-stream (ext:make-pipe-output-stream
