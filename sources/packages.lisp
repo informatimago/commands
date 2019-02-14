@@ -19,7 +19,6 @@
            "SET-DOCUMENTATION-TEXT"
            "*BASH-COMPLETION-HOOK*"
 
-
            ;; Utilities:
            "FIND-DIRECTORIES"
            "CONCAT" "MAPCONCAT"
@@ -41,6 +40,7 @@
   (:export "COMMAND"
            "REGISTER-COMMAND" "COMMAND-NAMED"
            "COMMAND-NAME" "COMMAND-USE-SYSTEMS" "COMMAND-MAIN" "COMMAND-PACKAGE"
+           "COMMAND-PATHNAME"
            "COMMAND-PACKAGE-NAME"
            "REGISTER-COMMAND-FILE"
            "DISPATCH-COMMAND"))

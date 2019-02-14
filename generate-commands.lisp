@@ -34,7 +34,7 @@
 (defparameter *all-commands*
   '("add-cookie" "add-paths" "ansi-test" "batch-emerge"
     "bin-to-c-array" "buzzword" "capitalize"
-    "cddb-to-tag" "check-surface" "clar" 
+    "cddb-to-tag" "check-surface" "clar"
     "clean-bd-archive" "clean-name" "clean-paths"
     "columnify" "cookie-diff" "cookie-loop"
     "cookie-merge" "cookie" "dedup"
@@ -47,10 +47,10 @@
     "lrev" "macosx-port-uninstall-recursively" "memo"
     "menu" "merge" "mfod" "new-password" "news-to-mbox"
     "nls" "one-of" "pic-resize" "pjb-diff" "programmer"
-    "pseudo-pop" "radio" "random" 
+    "pseudo-pop" "radio" "random"
     "religion" "remove-duplicate-files" "revlines"
     "rotate" "rstuml"
-    "script-test" 
+    "script-test"
     "sleep-schedule" "split-dir"
     "split-merge" "substitute" "surveille-host"
     "surveille-web-pages" "svn-locate-revision" "text"
@@ -60,14 +60,11 @@
 (dolist (name *all-commands*)
   (ignore-errors (delete-package (command-package-name name))))
 
-
-
 ;;; Scan command sources for command :use-systems forms.
 
-(setf *default-pathname-defaults* (merge-pathnames #P"./commands/.lisp" cl-user::*source-directory*))
-
-(dolist (name *all-commands*)
-  (register-command-file name (merge-pathnames name *default-pathname-defaults* nil)))
+(let ((*default-pathname-defaults* (merge-pathnames #P"./commands/.lisp" cl-user::*source-directory*)))
+  (dolist (name *all-commands*)
+    (register-command-file name (merge-pathnames name *default-pathname-defaults* nil))))
 
 ;;; Quickload used systems:
 
@@ -81,13 +78,15 @@
   (dolist (name *all-commands*)
     (format t "~&;Processing ~A~%" name) (finish-output)
     (handler-case
-        (let* ((package (command-package name)))
+        (let* ((package (command-package name))
+               (command (command-named name)))
           (let ((*program-name* name)
                 (*package* package))
             (load (let ((*program-name* name)
                         (*package* package))
-                    (compile-file name :verbose t)) :verbose t))
-          (let ((main (command-main (command-named name))))
+                    (compile-file (command-pathname command) :verbose t))
+                  :verbose t))
+          (let ((main (command-main command)))
             (when main (push (cons name main) commands))))
       (error (err)
         (format t "~&~A~%" err) (finish-output))))
@@ -95,17 +94,17 @@
 
 ;;; Generate link script:
 
-(with-open-file (*standard-output*
-                 (merge-pathnames (make-pathname :name "symlink-commands" :type :unspecific :version :unspecific
-                                                 :defaults cl-user::*release-directory*)
-                                  cl-user::*release-directory*
-                                  nil)
-                 :direction :output
-                 :if-does-not-exist :create
-                 :if-exists :supersede)
-  (write-line "#!/bin/bash")
-  (dolist (name *all-commands*)
-    (format t "ln -s commands ~A~%" name)))
+ (with-open-file (*standard-output*
+                  (merge-pathnames (make-pathname :name "symlink-commands" :type :unspecific :version :unspecific
+                                                  :defaults cl-user::*release-directory*)
+                                   cl-user::*release-directory*
+                                   nil)
+                  :direction :output
+                  :if-does-not-exist :create
+                  :if-exists :supersede)
+   (write-line "#!/bin/bash")
+   (dolist (name *all-commands*)
+     (format t "ln -s commands ~A~%" name)))
 
 ;;; Save the lisp image
 

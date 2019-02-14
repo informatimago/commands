@@ -163,5 +163,10 @@ test:$(ALL_PROGRAMS)
 	@ls -l $(ALL_PROGRAMS)
 
 clean:
+	-rm -f commands
 	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.dx64fsl \) -exec rm {} +
 #	-rm -f $(ALL_PROGRAMS)
+
+install:commands symlink-commands
+	install -m 755 commands         ~/bin/
+	install -m 755 symlink-commands ~/bin/

@@ -6,13 +6,14 @@
 
 (defvar *commands* (make-hash-table :test (function equal)))
 
-(defun register-command (name command-form)
-  (setf (gethash name *commands*) (list* :name name (rest command-form))))
+(defun register-command (name &rest attributes &key &allow-other-keys)
+  (setf (gethash name *commands*) (list* :name name attributes)))
 
 (defun command-named (name)
   (gethash name *commands*))
 
 (defun command-name        (command) (getf command :name))
+(defun command-pathname    (command) (getf command :pathname))
 (defun command-use-systems (command) (getf command :use-systems))
 (defun command-main        (command) (or (getf command :main)
                                          (format nil "~:@(~A::MAIN~)"
@@ -38,8 +39,10 @@
   (with-open-file (source pathname)
     (let* ((*package* (command-package name))
            (form      (read source)))
-      (register-command name (when (and (listp form) (eql (first form) 'command))
-                               form)))))
+      (apply (function register-command) name
+             :pathname pathname
+             (when (and (listp form) (eql (first form) 'command))
+               (rest form))))))
 
 
 (defun dispatch-command (pname &rest arguments)

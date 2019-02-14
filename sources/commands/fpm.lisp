@@ -945,13 +945,12 @@ underlying package system syntax.
 ;; (trace s)
 
 (defun main (arguments)
- (parse-options arguments)
+  (parse-options arguments)
   (error "Not implemented yet.")
   1)
 
 ;;;------------------------------------------------------------
 #-(and)
-
 (alt
  (seq (function print-version)  version)
  (seq (function pkg-install)    install     <package-name>)
