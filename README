@@ -1,0 +1,59 @@
+All my personnal unix commands written in Common Lisp are gathered here.
+
+Originally, they used clisp to as #! interpreter.
+
+However, since clisp development is slower than that of some host systems,
+this causes some problems on newest systems.
+
+Unfortunately, switching to cl-launch proves unsatisfactory.
+The main problems of cl-launch and #!/usr/local/bin/cl are that:
+
+1- they don't maintain the "script" aspect of the lisp code. Namely,
+   by insisting on compiling and loading the code before executing, we
+   cannot have forms that depend on the execution of previous forms.
+   In the case of scripts, this is particularly problematic, when we
+   have to inspect the environment and adapt to it, at run-time.
+
+2- the compilation and loading is performed on a copy of the source
+   script, therefore we cannot use *load-pathname* or
+   *compile-file-pathname* as a basis for script resources or other.
+
+3- they rely on quicklisp, which introduces some brittleness (and a
+   dependency on the user installation!).
+
+
+In particular, once we allow quicklisp in, there's no real advantage
+to maintain the notion of script and the #!-interpreter aspect and
+lightweightness.
+
+At the cost of some code duplication, loading and running the previous
+scripts could be fast and free of external dependencies other than the
+#!-interpreter.  Once we allow or require quicklisp and loading
+libraries with it, there's no point in further maintaining the script
+illusion.
+
+In consequence, the new model is to load in a single executable lisp
+image, all the "small programs" that are the scripts, and to dispatch
+according to the invocation program name.
+
+This transformations will have some advantages and some inconvenients:
+
+- we will be able to eliminate code duplications, which should be good
+  for maintainability,
+
+- since all the code is already loaded and compiled in the same
+  executable image in the cache, startup time and run-time should be
+  improved.
+
+- we must now avoid load-time execution (eg. defvar/defparameter
+  initialization forms or other toplevel forms), and global state
+  collisions (help or options will need some refactoring work).
+
+- scripting/command infrastructure will benefit all the commands.
+
+- uiop:run-program is insufficient (no :stream I/O, no pipe), so some
+  works will be needed to revert functionality.  (I'll have to revive
+  my portable implementation of run-program).
+
+--
+__Pascal Bourguignon__
