@@ -36,7 +36,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :use-systems (:cl-ppcre))
+(command :use-systems (:cl-ppcre :split-sequence)
+         :use-packages ("SPLIT-SEQUENCE"))
 
 
 (defun regexp-compile (regexp)
@@ -58,6 +59,14 @@
 (defun match-string (string range)
   (subseq string (first range) (second range)))
 
+(eval-when (:compile-toplevel :load-toplevel :execute) (shadow 'run-program))
+(defun run-program (command &rest arguments &key &allow-other-keys)
+  (if (listp command)
+      (apply (function ccl::run-program) (first command) (rest command) arguments)
+      (let ((command (split-sequence #\space command)))
+        (apply (function ccl::run-program) (first command) (rest command) arguments))))
+(defun external-process-output-stream (ep)
+  (ccl:external-process-output-stream ep))
 
 (defparameter *program-version* "1.0.2")
 
@@ -72,9 +81,10 @@
                 sym)))))
 
 (defun getuid ()
-  (funcall (or (function-named "UID" "POSIX")
+  (funcall (or (function-named "UID"    "POSIX")
                (function-named "getuid" "LINUX")
                (function-named "GETUID" "LINUX")
+               (function-named "GETUID" "CCL")
                (error "Cannot get the UID."))))
 
 (defvar *sockets* nil)
@@ -107,22 +117,25 @@ and read-from-string
 
 (defun emacsclient-22/read-output (stream)
   (loop
-    :for key := (read stream nil nil)
-    :for value := (when key (read-line stream))
-    :while key
-    :collect (cons key (emacsclient-22/process-value value))))
+    :for line := (read-line stream nil)
+    :for items := (split-sequence #\space line)
+    :for key := (first items)
+    :for value := (rest items)
+    :while line
+    :collect (cons key (emacsclient-22/process-value (format nil "~{~A~^ ~}" value)))))
 
 
 (defun emacsen ()
   (let ((emacsen '()))
     (dolist (socket *sockets* (reverse emacsen))
       (let ((frames
-              (with-open-stream (frames (uiop:run-program
-                                         (list "emacsclient"
-                                               (format nil "--socket-name=~A" socket)
-                                               "--eval"
-                                               "(mapcar (lambda (f) (list (frame-name f) (frame-display f))) (frame-list))")
-                                         :output :stream :wait nil))
+              (with-open-stream (frames (external-process-output-stream
+                                         (run-program
+                                          (list "emacsclient"
+                                                (format nil "--socket-name=~A" socket)
+                                                "--eval"
+                                                "(mapcar (lambda (f) (list (frame-name f) (frame-display f))) (frame-list))")
+                                          :input nil :output :stream :wait nil)))
                 ;; Output from /Applications/Emacs.app/Contents/MacOS/bin/emacsclient 24.2 on MacOSX:
                 ;; ((#1="EMACS" #2="iMac-Core-i5.local")
                 ;;  (#1# #2#))
@@ -136,13 +149,14 @@ and read-from-string
                 (let ((ch (peek-char nil frames)))
                   (if (char= #\- ch)
                       (cdr (assoc '-print (emacsclient-22/read-output frames)))
-                      (read frames nil nil))))))
+                      (read-line frames nil))))))
         (if frames
             (push (list socket frames) emacsen)
             (multiple-value-bind (all pid) (match "^.*server-([0-9]+)$" socket)
               (if all
                   (let ((pid (match-string socket  pid)))
-                    (with-open-stream (ps (uiop:run-program (list "ps" "-p" pid) :output :stream :wait nil))
+                    (with-open-stream (ps (external-process-output-stream
+                                           (run-program (list "ps" "-p" pid) :input nil :output :stream :wait nil)))
                       (unless (loop
                                 :named search-emacs
                                 :for line = (read-line ps nil nil)
