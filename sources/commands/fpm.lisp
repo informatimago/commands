@@ -242,13 +242,13 @@ Signals an error if they exit with an error status or are killed by a signal."
 
 
 ;;;------------------------------------------------------------
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun compose-sexp (functions var)
+    (if (null functions)
+        var
+        (list (car functions) (compose-sexp (cdr functions) var)))))
 
-(defun compose-sexp (functions var)
-  (if (null functions)
-      var
-      (list (car functions) (compose-sexp (cdr functions) var))))
-
-(defmacro COMPOSE (&rest functions)
+(defmacro compose (&rest functions)
   `(lambda (x) ,(compose-sexp functions 'x)))
 
 (defun ensure-list (x) (if (listp x) x (list x)))
@@ -352,7 +352,8 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 
 (defmethod pm-list-packages ((self apt)
                              &key installed all available not-installed required
-                             packages pattern)
+                               packages pattern)
+  (declare (ignore all available))
   (cond
     (packages            (s "dpkg --status"  packages))
     (installed           (s "dpkg --list"    pattern))
@@ -402,9 +403,9 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 
 (defmethod pm-list-packages ((self macport) &key installed all available required
                              not-installed packages pattern)
+  (declare (ignore installed all available required not-installed packages pattern))
   (error "not implemented yet")
-  (s "port list")
-  )
+  (s "port list"))
 
 (defmethod pm-list-files                    ((self macport) package-designator)
   (s "port contents" package-designator))
@@ -413,6 +414,7 @@ or an expression such as (= <package>)  (<= <package>) etc."))
   (s "port provides" file-path))
 
 (defmethod pm-find-package-with-info        ((self macport) pattern)
+  (declare (ignore pattern))
   (error "not implemented yet"))
 
 (defmethod pm-dependencies                  ((self macport) package-designator)
@@ -463,9 +465,9 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 ;; /usr/portage/\([-a-zA-Z0-9]\)/\([-A-Za-z0-9]\)/\([-A-Za-z0-9]\)-\([0-9][.0-9]
 
 
-(defparameter *portage-category-regexp*         "\\([A-Za-z0-9][-A-Za-z0-9]*\\)")
-(defparameter *portage-name-regexp*             "\\([A-Za-z0-9][-_+A-Za-z0-9]*[+A-Za-z0-9]\\)")
-(defparameter *portage-optional-version-regexp* "\\(\\(-\\([0-9][.0-9]*[-_a-z0-9]*\\)\\(-r[0-9][0-9]*\\)\\?\\)\\?\\)")
+(defparameter *portage-category-regexp*         "([A-Za-z0-9][-A-Za-z0-9]*)")
+(defparameter *portage-name-regexp*             "([A-Za-z0-9][-_+A-Za-z0-9]*[+A-Za-z0-9])")
+(defparameter *portage-optional-version-regexp* "((-([0-9][.0-9]*[-_a-z0-9]*)(-r[0-9][0-9]*)?)?)")
 
 (defparameter *portage-pv-regexp*   (format nil "^~A~A$"
                                            *portage-name-regexp*
@@ -641,7 +643,8 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 
 (defmethod pm-list-packages ((self portage)
                              &key installed all available not-installed required
-                             packages pattern)
+                               packages pattern)
+  (declare (ignore all available))
   (cond
     (packages            (s "equery list" packages))
     (installed           (s "equery list    -i -f" pattern))
@@ -686,7 +689,6 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 
 
 (defmethod pm-version ((self unimplemented-pms))
-  (declare (ignore package-designator))
   (unimplemented-pms self))
 
 (defmethod pm-install ((self unimplemented-pms) package-designator)
@@ -709,7 +711,7 @@ or an expression such as (= <package>)  (<= <package>) etc."))
 (defmethod pm-list-packages ((self unimplemented-pms)
                              &key installed all available not-installed required
                              packages pattern)
-  (declare (ignore installed all available not-installed packages pattern))
+  (declare (ignore installed all available not-installed required packages pattern))
   (unimplemented-pms self))
 
 (defmethod pm-list-files                    ((self unimplemented-pms) package-designator)
@@ -781,17 +783,7 @@ or an expression such as (= <package>)  (<= <package>) etc."))
             'fpm sysname))))
 
 
-(defparameter *package-management-system*
-  ;; Notice that we don't signal an error just because we don't have a
-  ;; package management system class, since the script may be loaded
-  ;; without a need for it (eg. for bash completion).  The error is
-  ;; deferred to the UNIMPLEMENTED-PMS class if it receives a message.
-  (let ((pms (distribution-default-package-management-system (uname) (distribution))))
-    (cond
-      ((ignore-errors (find-class pms))
-       (make-instance pms))
-      (t
-       (make-instance 'unimplemented-pms :package-management-system pms)))))
+(defparameter *package-management-system* nil)
 
 
 (defun fpm-operate (key &rest arguments)
@@ -945,9 +937,20 @@ underlying package system syntax.
 ;; (trace s)
 
 (defun main (arguments)
+  (setf *package-management-system*
+        ;; Notice that we don't signal an error just because we don't have a
+        ;; package management system class, since the script may be loaded
+        ;; without a need for it (eg. for bash completion).  The error is
+        ;; deferred to the UNIMPLEMENTED-PMS class if it receives a message.
+        (let ((pms (distribution-default-package-management-system (uname) (distribution))))
+          (cond
+            ((ignore-errors (find-class pms))
+             (make-instance pms))
+            (t
+             (make-instance 'unimplemented-pms :package-management-system pms)))))
   (parse-options arguments)
   (error "Not implemented yet.")
-  1)
+  ex-usage)
 
 ;;;------------------------------------------------------------
 #-(and)

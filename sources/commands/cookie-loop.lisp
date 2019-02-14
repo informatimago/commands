@@ -1,7 +1,6 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 (defun getenv (var) (uiop:getenv var))
-(defun run-program (cmd) (uiop:run-program cmd :output :interactive))
 
 
 (defparameter *escape*    (code-char 27))

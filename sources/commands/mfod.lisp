@@ -77,18 +77,7 @@
                (function-named "GETUID" "LINUX")
                (error "Cannot get the UID."))))
 
-(defparameter *sockets*
-  (let ((uid (getuid)))
-    (sort
-     (mapcar (function namestring)
-             (remove-if-not (function probe-file)
-                            (remove-duplicates
-                             ;; getting server is not so useful since directory will
-                             ;; return the truename...
-                             (append (directory (format nil "/tmp/emacs~A/server"   uid))
-                                     (directory (format nil "/tmp/emacs~A/server-*" uid)))
-                             :test (function equalp))))
-     (function string-lessp))))
+(defvar *sockets* nil)
 
 
 (defun emacsclient-22/process-value (value)
@@ -242,6 +231,17 @@ and read-from-string
 
 
 (defun main (arguments)
+  (setf *sockets* (let ((uid (getuid)))
+                    (sort
+                     (mapcar (function namestring)
+                             (remove-if-not (function probe-file)
+                                            (remove-duplicates
+                             ;; getting server is not so useful since directory will
+                             ;; return the truename...
+                                             (append (directory (format nil "/tmp/emacs~A/server"   uid))
+                                                     (directory (format nil "/tmp/emacs~A/server-*" uid)))
+                                             :test (function equalp))))
+                     (function string-lessp))))
   (setf *emacsen* (emacsen))
   (if (null *emacsen*)
       (progn

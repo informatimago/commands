@@ -205,7 +205,7 @@
     (let ((boundary
            (multiple-value-bind (se mi ho da mo ye)
                (decode-universal-time (get-universal-time))
-             (format nil "~A-~8,'0X-~4,'0D~2,'0D~2,'0~2,'0D~2,'0D~2,'0D"
+             (format nil "~A-~8,'0X-~4,'0D~2,'0D~2,'0D~2,'0D~2,'0D~2,'0D"
                      (with-open-stream
                          (in (uiop:run-program "hostname -f"
                                                :output :stream

@@ -74,23 +74,30 @@
 
 ;;; Compile and load all commands:
 
-(let ((commands '()))
-  (dolist (name *all-commands*)
-    (format t "~&;Processing ~A~%" name) (finish-output)
-    (handler-case
-        (let* ((package (command-package name))
-               (command (command-named name)))
-          (let ((*program-name* name)
-                (*package* package))
-            (load (let ((*program-name* name)
+(defparameter *failures* 0)
+
+(dolist (name *all-commands*)
+  (format t "~&;Processing ~A~%" name) (finish-output)
+  (handler-case
+      (let* ((package (command-package name))
+             (command (command-named name)))
+        (multiple-value-bind (fasl warnings-p failure-p)
+            (let ((*program-name* name)
+                  (*package* package))
+              (compile-file (command-pathname command) :verbose t))
+          (if (or warnings-p failure-p)
+              (progn
+                (format t "~&;Failed to compile ~S~%" (command-pathname command))
+                (incf *failures*))
+              (if (let ((*program-name* name)
                         (*package* package))
-                    (compile-file (command-pathname command) :verbose t))
-                  :verbose t))
-          (let ((main (command-main command)))
-            (when main (push (cons name main) commands))))
-      (error (err)
-        (format t "~&~A~%" err) (finish-output))))
-  (pprint commands))
+                    (load fasl :verbose t))
+                  (format t "~&;Successfully loaded ~S~%" fasl)
+                  (progn
+                    (format t "~&;Failed to load ~S~%" (command-pathname command))
+                    (incf *failures*))))))
+    (error (err)
+      (format t "~&~A~%" err) (finish-output))))
 
 ;;; Generate link script:
 
@@ -108,6 +115,12 @@
 
 ;;; Save the lisp image
 
+#-testing
+(unless (zerop *failures*)
+  (format t "~&;~D failures~%" *failures*)
+  (finish-output)
+  (script:exit 1))
+
 (cl-user::generate-program :program-name "commands"
                            :main-function "COM.INFORMATIMAGO.COMMAND.UTILITY:DISPATCH-COMMAND"
                            :system-name nil
@@ -119,3 +132,5 @@
                            :asdf-directories  cl-user::*asdf-directories*
                            :release-directory cl-user::*release-directory*)
 
+;; In most implementations, we should not reach this point, since saving the image exits.
+#-testing (script:exit 0)

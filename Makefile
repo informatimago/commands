@@ -91,13 +91,15 @@ CC=cc
 LINE="//----------------------------------------------------------------------"
 HERE=$(shell pwd)
 
-.PHONY: all clean test
+.PHONY: all clean test commands
 
-commands symlink-commands:generate-commands.lisp generate.lisp
+commands:bin/commands
+
+bin/commands bin/symlink-commands:generate-commands.lisp generate.lisp Makefile sources/*.lisp sources/commands/*.lisp
 	@printf "// Generating Executable from %s source: %s\n" "Lisp" $@
 	-@rm -rf ~/.cache/common-lisp/ccl-*$(HERE)
 	@$(CCL) -n -l generate-commands.lisp # > commands-lisp-ccl.log 2>&1
-	cp commands symlink-commands bin/
+	mv commands symlink-commands bin/
 	chmod 755 bin/symlink-commands
 
 hw-c:hw.c
@@ -163,10 +165,10 @@ test:$(ALL_PROGRAMS)
 	@ls -l $(ALL_PROGRAMS)
 
 clean:
-	-rm -f commands
-	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.dx64fsl \) -exec rm {} +
+	-rm -f bin/commands
+	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.[dl]x64fsl \) -exec rm {} +
 #	-rm -f $(ALL_PROGRAMS)
 
-install:commands symlink-commands
-	install -m 755 commands         ~/bin/
-	install -m 755 symlink-commands ~/bin/
+install:bin/commands bin/symlink-commands
+	install -m 755 bin/commands         ~/bin/
+	install -m 755 bin/symlink-commands ~/bin/

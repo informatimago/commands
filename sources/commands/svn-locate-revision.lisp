@@ -51,13 +51,13 @@
 (defun make-pipe-input-stream  (command &key (external-format :default)
                                           (element-type 'character)
                                           (buffered t))
-  (declare (ignore command external-format element-type))
+  (declare (ignore command external-format element-type buffered))
   (error "Not implemented yet."))
 
 (defun make-pipe-output-stream (command &key (external-format :default)
                                           (element-type 'character)
                                           (buffered t))
-  (declare (ignore command external-format element-type))
+  (declare (ignore command external-format element-type buffered))
   (error "Not implemented yet."))
 
 

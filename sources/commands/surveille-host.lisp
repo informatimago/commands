@@ -37,18 +37,10 @@
 ;;;;*****************************************************************************
 
 (command :use-systems (:com.informatimago.common-lisp)
-         :name "COM.INFORMATIMGO.COMMAND.SURVEILLE-HOST:MAIN")
+         :use-packages ("COMMON-LISP" "SCRIPT"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.ACTIVITY"))
 
-
-(defpackage "COM.INFORMATIMGO.COMMAND.SURVEILLE-HOST"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.ACTIVITY")
-  (:shadowing-import-from "SCRIPT" "CONCAT" "MAPCONCAT")
-  (:export "MAIN")
-  (:export "REMOTE" "ADD-REMOTE"))
-(in-package "COM.INFORMATIMGO.COMMAND.SURVEILLE-HOST")
 
 (defparameter *from-email* "surveille-host <pjb@informatimago.com>")
 
@@ -113,37 +105,34 @@ POST:   There is no remote defintions in *REMOTES*.
 RETURN: Whether :ON-LINE or :OFF-LINE according to the status of ping.
 "
   (logging (format nil "pinging ~A" (name self))
-           (if (= 0 (ext:run-shell-command
-                     (format nil "ping -c 10 -w 15 -n -q ~S" (ip-address self))
-                     :input nil :output nil))
-             :on-line
-             :off-line)))
+           (if (= 0 (uiop:run-program (format nil "ping -c 10 -w 15 -n -q ~S" (ip-address self))
+                                      :input nil :output nil))
+               :on-line
+               :off-line)))
 
 (defmethod notificate-state-change ((self remote))
   (when (email self)
     (logging (format nil "sendmail ~A" (email self))
-             (let ((msg-stream   (ext:run-shell-command
-                                  (format nil "sendmail ~A" (email self))
-                                  :input :stream :output nil)))
+             (let ((msg-stream   (uiop:run-program (format nil "sendmail ~A" (email self))
+                                                   :force-shell t :input :stream :output nil)))
                (format msg-stream
                        (concatenate 'string
-                         "From: ~A~%"
-                         "To: ~A~%"
-                         "Subject: ~A going ~A~%"
-                         "~%"
-                         "I've the pleasure to inform you that ~%"
-                         "the remote host ~A (~A)~%"
-                         "just went ~A.~%"
-                         "~%"
-                         "-- ~%"
-                         "The surveille-host script.~%")
+                                    "From: ~A~%"
+                                    "To: ~A~%"
+                                    "Subject: ~A going ~A~%"
+                                    "~%"
+                                    "I've the pleasure to inform you that ~%"
+                                    "the remote host ~A (~A)~%"
+                                    "just went ~A.~%"
+                                    "~%"
+                                    "-- ~%"
+                                    "The surveille-host script.~%")
                        *from-email*
                        (email self)
                        (name self)
                        (if (eq :on-line (state self)) "on-line" "off-line")
                        (name self) (ip-address self)
-                       (if (eq :on-line (state self)) "on-line" "off-line")
-                       )
+                       (if (eq :on-line (state self)) "on-line" "off-line"))
                (close msg-stream)))))
 
 (defmethod check ((self remote))
@@ -183,12 +172,13 @@ DO:    If there is already a remote with the same IP-ADDRESS
 
 (defun main (argv)
   (declare (ignore argv))
-  (add-remote "hermes"  "195.114.85.131"  "pjb@informatimago.com")
-  (add-remote "janus-1" "195.114.85.145"  "pjb@informatimago.com")
-  (add-remote "janus-2" "195.114.85.146"  "pjb@informatimago.com")
-  (add-remote "janus-3" "195.114.85.147"  "pjb@informatimago.com")
-  (add-remote "janus-4" "195.114.85.148"  "pjb@informatimago.com")
-  (add-remote "bolet"   "bolet.no-ip.com" "pjb@informatimago.com")
+
+  (add-remote "hubble"   "hubble.informatimago.com"   "pjb@informatimago.com")
+  (add-remote "proteus"  "proteus.informatimago.com"  "pjb@informatimago.com")
+  (add-remote "kuiper"   "kuiper.informatimago.com"   "pjb@informatimago.com")
+  (add-remote "despina"  "despina.informatimago.com"  "pjb@informatimago.com")
+  (add-remote "larissa"  "larissa.informatimago.com"  "pjb@informatimago.com")
+
   (let ((period (* 30 (hash-table-size *remotes*))))
     (maphash (lambda (key remote)
                (declare (ignore key))

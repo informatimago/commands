@@ -18,7 +18,7 @@
                ((#:albert #:docbook #:textcolor) . "black"))
   :depends-on ("com.informatimago.common-lisp.cesarum")
   :components ((:file "packages" :depends-on ())
-               (:file "utility"  :depends-on ("packages"))
+               (:file "utility"  :depends-on ("packages" "script"))
                (:file "script"   :depends-on ("packages")))
   #+asdf-unicode :encoding #+asdf-unicode :utf-8)
 

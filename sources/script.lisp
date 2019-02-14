@@ -816,23 +816,22 @@ complete -F completion_~:*~A ~:*~A~%"
 
 
 
-(defun run-program (program arguments &key (input :terminal) (output :terminal)
+(defun run-program (program-and-arguments &key (input :terminal) (output :terminal)
                     (if-output-exists :error) (wait t))
   "
 RETURN:     The status returned by the command.
 SEE ALSO:   SHELL
 "
-  (uiop:run-program (cons program arguments)
-                    :input input :output output :if-output-exists if-output-exists :wait wait))
+  (uiop:run-program program-and-arguments :input input :output output :if-output-exists if-output-exists :wait wait))
 
 
 (defun uname (&rest options)
   "Without OPTIONS, return a keyword naming the system (:LINUX, :DARWIN, etc).
 With options, returns the first line output by uname(1)."
-  (with-open-stream (uname (run-program "uname" (prepare-options options)
-                                        :input nil
-                                        :output :stream
-                                        :wait t))
+  (with-open-stream (uname (uiop:run-program (cons "uname" (prepare-options options))
+                                             :input nil
+                                             :output :stream
+                                             :wait t))
     (values (if options
                 (read-line uname)
                 (intern (string-upcase (read-line uname))

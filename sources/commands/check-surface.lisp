@@ -35,6 +35,8 @@
 ;;;;    59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ;;;;****************************************************************************
 
+(command :use-systems (:com.informatimago.clmisc)
+         :use-packages ("COM.INFORMATIMAGO.CLMISC.RESOURCE-UTILIZATION"))
 
 (defun usage ()
   (format
@@ -500,7 +502,7 @@ RESULTS:          The number of failed blocks;
 
 
 (defun main (arguments)
-  (com.informatimago.clmisc.resource-utilization:reporting-sru
+  (reporting-sru
       (:job-origin
        (format nil "~A@~A"
                (or (uiop:getenv "USER")
