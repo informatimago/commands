@@ -48,25 +48,25 @@
 
 (defun disk-usage (dir-upath)
   (let ((directories
-         (append (directory (concatenate 'string dir-upath "/*"))
-                 (directory (concatenate 'string dir-upath "/*/")))))
+          (append (directory (concatenate 'string dir-upath "/*"))
+                  (directory (concatenate 'string dir-upath "/*/")))))
     (unless directories
       (error "Cannot find files or directories in ~A/" dir-upath))
     (with-open-stream
         (in (uiop:run-program
-                "du"
-              :arguments (list* "-s" "-k" directories)
-              :input nil
-              :output :stream))
+             (list* "du" "-s" "-k" directories)
+             :input nil
+             :output :stream
+             :wait nil))
       (loop
-         with result = '()
-         for line = (read-line in nil nil)
-         while line
-         do (let ((tab (position (code-char 9) line)))
-              (when tab
-                (push (cons (subseq line (1+ tab))
-                            (parse-integer (subseq line 0 tab))) result)))
-         finally (return result)))))
+        with result = '()
+        for line = (read-line in nil nil)
+        while line
+        do (let ((tab (position (code-char 9) line)))
+             (when tab
+               (push (cons (subseq line (1+ tab))
+                           (parse-integer (subseq line 0 tab))) result)))
+        finally (return result)))))
 
 (defun factor (string)
   (let ((pos (position (char string (1- (length string))) "KMGkmg")))

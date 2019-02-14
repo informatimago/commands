@@ -86,10 +86,11 @@
   (unwind-protect
        (progn
          #+clisp (setf custom:*default-file-encoding* *encoding-iso-8859-1*)
-         (multiple-value-bind (io in out) (uiop:run-program "file"
-                                                            :arguments (list "-ib" "-")
-                                                            :input :stream
-                                                            :output :stream)
+         (multiple-value-bind (io in out) (uiop:run-program
+                                           (list "file" "-ib" "-")
+                                           :input :stream
+                                           :output :stream
+                                           :wait nil)
            (close io)
            (ignore-errors
             (write-sequence (babel:octets-to-string data :encoding *encoding-iso-8859-1*) out))
@@ -209,6 +210,7 @@
                      (with-open-stream
                          (in (uiop:run-program "hostname -f"
                                                :output :stream
+                                               :wait nil
                                                :force-shell t))
                        (read-line in))
                      (random #.(expt 2 32))

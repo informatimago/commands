@@ -20,7 +20,7 @@
                                           (make-pathname :name :wild
                                                          :type :wild
                                                          :defaults dir)))
-                                 :input nil :output :stream
+                                 :input nil :output :stream :wait nil
                                  :force-shell t))
           (loop :for (sum file) := (list (read sums nil nil)
                                        (read-line sums nil nil))

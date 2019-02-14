@@ -49,7 +49,7 @@
                                  :else :collect p)
                               *processing*))
         (before '()))
-    (with-open-stream (pout (uiop:run-program "port" :arguments (append options packs) :input nil :output :stream))
+    (with-open-stream (pout (uiop:run-program "port" :arguments (append options packs) :input nil :output :stream :wait nil))
       (loop
          :with prefix = "--->  	"
          :for line = (read-line pout nil nil)

@@ -263,10 +263,10 @@ RETURN:  a cons with two substrings of string such as:
         (flist (sort
                 (stream-to-string-list
                  (uiop:run-program
-                  "/usr/bin/find"
-                  :arguments (append files '("-name" "*.ogg" "-print"))
+                  (cons "/usr/bin/find" (append files '("-name" "*.ogg" "-print")))
                   :input     nil
-                  :output    :stream))
+                  :output    :stream
+                  :wait nil))
                 'string<)))
 
     (when (= 0 (length flist))
@@ -417,19 +417,19 @@ RETURN:  a cons with two substrings of string such as:
 (defun commit-comments (files)
   (dolist (fogg (stream-to-string-list
                  (uiop:run-program
-                  "/usr/bin/find"
-                  :arguments (append files '("-name" "*.ogg" "-print"))
+                  (cons "/usr/bin/find" (append files '("-name" "*.ogg" "-print")))
                   :input     nil
-                  :output    :stream)))
+                  :output    :stream
+                  :wait nil)))
     (let ((fcom (string-replace fogg ".ogg" comext)))
       (if (probe-file fcom)
           (progn
             (format t "~a: Writting comments to '~a'...~%" *program-name* fogg)
             (copy-stream (uiop:run-program
-                          "/usr/local/bin/vorbiscomment"
-                          :arguments (list "-w" fogg "-c" fcom)
+                          (list "/usr/local/bin/vorbiscomment" "-w" fogg "-c" fcom)
                           :input  nil
-                          :output :stream)
+                          :output :stream
+                          :wait nil)
                          *standard-output*))
           (format t "~a: Missing '~a'.~%" *program-name* fcom)))))
 

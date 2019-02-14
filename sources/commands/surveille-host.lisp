@@ -114,7 +114,7 @@ RETURN: Whether :ON-LINE or :OFF-LINE according to the status of ping.
   (when (email self)
     (logging (format nil "sendmail ~A" (email self))
              (let ((msg-stream   (uiop:run-program (format nil "sendmail ~A" (email self))
-                                                   :force-shell t :input :stream :output nil)))
+                                                   :force-shell t :input :stream :output nil :wait nil)))
                (format msg-stream
                        (concatenate 'string
                                     "From: ~A~%"

@@ -47,7 +47,8 @@
                         (with-open-stream (stty (uiop:run-program (format nil "stty -a < ~S" path)
                                                                   :force-shell t
                                                                   :input :terminal
-                                                                  :output :stream))
+                                                                  :output :stream
+                                                                  :wait nil))
                           (loop
                             :for line = (read-line stty nil nil)
                             :while line

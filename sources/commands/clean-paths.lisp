@@ -269,7 +269,7 @@ RETURN: The path to a file found under `directory' whose inode is `inode',
     (ext:run-program "find"
       :arguments (list (script:shell-quote-argument directory)
                        "-inum" inode "-print")
-      :output :stream)
+      :output :stream :wait nil)
     #\newline)))
 
 

@@ -831,7 +831,7 @@ With options, returns the first line output by uname(1)."
   (with-open-stream (uname (uiop:run-program (cons "uname" (prepare-options options))
                                              :input nil
                                              :output :stream
-                                             :wait t))
+                                             :wait nil))
     (values (if options
                 (read-line uname)
                 (intern (string-upcase (read-line uname))

@@ -89,7 +89,7 @@ RETURN: number of sectors per disk;
                                            (etypecase device
                                              (string device)
                                              (pathname (namestring device))))
-                          :output :stream))
+                          :output :stream :wait nil))
     (let ((*read-eval* nil)
           (*read-base* 10.))
       (loop
@@ -137,7 +137,7 @@ RETURN: number of sectors per disk;
                                 (etypecase device
                                   (string device)
                                   (pathname (namestring device))))
-                          :output :stream))
+                          :output :stream :wait nil))
     (let ((*read-eval* nil)
           (*read-base* 10.))
       (or (read inp nil nil)

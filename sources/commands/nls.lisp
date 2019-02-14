@@ -15,7 +15,8 @@
 
 (defun nls ()
   (with-open-stream (files (uiop:run-program '("/bin/ls" "-1")
-                                             :output :stream))
+                                             :output :stream
+                                             :wait nil))
     (loop
       :with table = (make-hash-table :test (function equal))
       :for file = (read-line files nil nil)

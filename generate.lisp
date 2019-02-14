@@ -155,7 +155,7 @@
                                                                (funcall (runtime-function "QL:QUICKLOAD") ',(cons system-name system-list)))))
                        :input nil
                        :output :stream
-                       :wait t)
+                       :wait nil)
     (unless (zerop status)
       (write-string (slurp-stream output)))
     (say "   status ~S" status)))

@@ -235,7 +235,8 @@ Signals an error if they exit with an error status or are killed by a signal."
   (with-output-to-string (out)
     (with-open-stream (in (uiop:run-program (format nil "~{~A ~}" args)
                                             :force-shell t
-                                            :output :stream :wait nil))
+                                            :output :stream
+                                            :wait nil))
       (loop
         :for line = (read-line in nil nil)
         :while line :do (write-line line out)))))

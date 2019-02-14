@@ -122,7 +122,7 @@ and read-from-string
                                                (format nil "--socket-name=~A" socket)
                                                "--eval"
                                                "(mapcar (lambda (f) (list (frame-name f) (frame-display f))) (frame-list))")
-                                         :output :stream))
+                                         :output :stream :wait nil))
                 ;; Output from /Applications/Emacs.app/Contents/MacOS/bin/emacsclient 24.2 on MacOSX:
                 ;; ((#1="EMACS" #2="iMac-Core-i5.local")
                 ;;  (#1# #2#))
@@ -142,7 +142,7 @@ and read-from-string
             (multiple-value-bind (all pid) (match "^.*server-([0-9]+)$" socket)
               (if all
                   (let ((pid (match-string socket  pid)))
-                    (with-open-stream (ps (uiop:run-program (list "ps" "-p" pid) :output :stream))
+                    (with-open-stream (ps (uiop:run-program (list "ps" "-p" pid) :output :stream :wait nil))
                       (unless (loop
                                 :named search-emacs
                                 :for line = (read-line ps nil nil)

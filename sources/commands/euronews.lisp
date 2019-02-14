@@ -81,6 +81,7 @@
                                                   (format nil "{ lynx -source 'http://www.euronews.net/create_html.php?page=~A&langue=~A'|tr '<' '\\012'|grep ramgen|sed -e 's/.*lien=\\(.*hostname\\).*/http:\\/\\/\\1/' ;}" page language)
                                                   :input     nil
                                                   :output    :stream
+                                                   :wait nil
                                                   :force-shell t))
                                  ;;do (format t "new-urls=~S~%" new-urls)
                                  append new-urls into all-urls

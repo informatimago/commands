@@ -73,7 +73,12 @@ SEE: COMMAND-PACKAGE-NAME")
                 com.informatimago.command.script:*program-path*         pname
                 com.informatimago.command.script:*arguments*            arguments)
           (com.informatimago.command.script:exit
-           (funcall (read-from-string (command-main command)) arguments)))
+           (handler-case
+               (funcall (read-from-string (command-main command)) arguments)
+             (error (err)
+               (format *error-output* "~&~A: ~A~%" name err)
+               (finish-output *error-output*)
+               com.informatimago.command.script:ex-software))))
         (error "No such command: ~S" name))
     (values)))
 
