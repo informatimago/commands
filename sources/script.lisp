@@ -427,7 +427,7 @@ A prefix arg makes KEEP-TIME non-nil.
 
 
 
-#+linux ;; Should probably move away.
+#+(and clisp linux) ;; Should probably move away.
 (defun make-symbolic-link (filename linkname &optional ok-if-already-exists)
   "
 IMPLEMENTATION: The optional argument is not implemented.
