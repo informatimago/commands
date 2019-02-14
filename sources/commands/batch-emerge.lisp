@@ -11,7 +11,7 @@
         (loop
           :for package = (read f nil nil)
           :while package
-          :do (let ((batch (uiop:run-program "batch" '() :input :stream :output :stream :wait nil)))
+          :do (let ((batch (uiop:run-program "batch" :input :stream :output :stream :wait nil)))
                 (with-open-stream (input (ccl:external-process-input-stream batch))
                   (format input "emerge ~A~%" package)))))))
   ex-ok)
