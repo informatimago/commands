@@ -53,8 +53,7 @@
     (if (equal '(nil) results)
         nil
         (destructuring-bind (as ae ss es) results
-          (declare (ignore as ae))
-          (map 'list (function list) ss es)))))
+          (cons (list as ae) (map 'list (function list) ss es))))))
 
 (defun match-start (range) (first  range))
 (defun match-end   (range) (second range))
