@@ -47,7 +47,7 @@
     (if (equal '(nil) results)
         nil
         (destructuring-bind (as ae ss es) results
-          (cons (list as ae) (map 'list (function list) ss es))))))
+          (values-list (cons (list as ae) (map 'list (function list) ss es)))))))
 
 (defun match (regexp string) (regexp-exec regexp string))
 (defun match-start (range) (first  range))
