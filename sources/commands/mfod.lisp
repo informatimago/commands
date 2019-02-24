@@ -138,7 +138,12 @@ and read-from-string
                 (let ((ch (peek-char nil frames)))
                   (if (char= #\- ch)
                       (cdr (assoc '-print (emacsclient-22/read-output frames)))
-                      (read frames nil))))))
+                      (handler-case
+                          (read frames nil)
+                        (error (err)
+                          (format *error-output* "~&~A~%" err)
+                          (finish-output *error-output*)
+                          nil)))))))
         (if frames
             (push (list socket frames) emacsen)
             (multiple-value-bind (all pid) (match "^.*server-([0-9]+)$" socket)
