@@ -44,7 +44,6 @@
 
 (in-package "COM.INFORMATIMAGO.COMMAND.SCRIPT")
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; From /usr/include/sysexits.h (Linux)
@@ -167,54 +166,50 @@ CANTCREAT, but rather for higher level permissions.")
 (defvar *default-program-name* "untitled")
 
 (defun program-path ()
-  #+clisp
-  (let* ((argv  (ext:argv))
-         (largv (length argv))
-         (args  ext:*args*)
-         (largs (length args))
-         (index (- largv largs 1))
-         (path  (and (<= 0 index largv) (elt argv index))))
-    (cond
-      (path
-       path)
-      #-cl-launch
-      ((and *load-truename*
-            (string/= (file-namestring *load-truename*) "script.lisp"))
-       (namestring *load-truename*))
-      (t
-       *default-program-name*)))
-  #-clisp
-  *default-program-name*)
+  #+ccl   (first ccl:*command-line-argument-list*)
+  #+clisp (let* ((argv  (ext:argv))
+                 (largv (length argv))
+                 (args  ext:*args*)
+                 (largs (length args))
+                 (index (- largv largs 1))
+                 (path  (and (<= 0 index largv) (elt argv index))))
+            (cond
+              (path
+               path)
+              #-cl-launch
+              ((and *load-truename*
+                    (string/= (file-namestring *load-truename*) "script.lisp"))
+               (namestring *load-truename*))
+              (t
+               *default-program-name*)))
+  #-(or ccl clisp) *default-program-name*)
 
-
-(defvar *program-path* (program-path)
+(defvar *program-path* *default-program-name*
   "A namestring of the path to the program.
 This may be a relative pathname, when it's obtained from argv[0].
 If available we use the actual program name (from (EXT:ARGV) or
 *LOAD-TRUENAME*), otherwise we fallback to *DEFAULT-PROGRAM-NAME*.")
 
-
-(defvar *program-name* (file-namestring *program-path*)
+(defvar *program-name* "untitled"
   "Name of the program.")
 
-
-(defvar *arguments*
+(defun arguments ()
+  #+ccl   (rest ccl:*command-line-argument-list*)
   #+clisp ext:*args*
-  #-clisp '()
-  "A list of command line arguments (strings).")
+  #-(or ccl clisp) '())
 
+(defvar *arguments* '()
+  "A list of command line arguments (strings).")
 
 (defvar *verbose* nil
   "Adds some trace output.")
 
-
 (defvar *debug* nil
   "Errors break into the debugger.")
 
-
-#-(or use-ppcre use-regexp) (push #-(and) :use-ppcre
-                                  #+(and) :use-regexp
-                                  *features*)
+#-(or use-ppcre use-regexp) (pushnew (progn #-(and) :use-ppcre
+                                            #+(and) :use-regexp)
+                                     *features*)
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -231,19 +226,19 @@ If available we use the actual program name (from (EXT:ARGV) or
   (multiple-value-bind (res err) (ignore-errors (funcall thunk))
     (when err
       (if (find "-Kfull" (ext:argv) :test (function string=))
-        (error err)
-        (ext:exit
-         (or  (ext:run-program "/usr/local/bin/clisp"
-                :arguments (append '("-ansi" "-q" "-E" "utf-8" "-Kfull")
-                                   (cons *program-path* *arguments*))
-                :wait t
-                #+linux :may-exec  #+linux t
-                #+win32 :indirectp #+win32 nil)
-              0))))))
+          (error err)
+          (ext:exit
+           (or  (ext:run-program "/usr/local/bin/clisp"
+                                 :arguments (append '("-ansi" "-q" "-E" "utf-8" "-Kfull")
+                                                    (cons *program-path* *arguments*))
+                                 :wait t
+                                 #+linux :may-exec  #+linux t
+                                 #+win32 :indirectp #+win32 nil)
+                0))))))
 
 #+(and clisp (not linux))
 (when (find "linux" *modules* :test (function string=))
-          (push :linux *features*))
+  (push :linux *features*))
 
 #+(and clisp (not (or linux macos win32 #|what else is not linux?|#)))
 (relaunch-with-kfull-linkset-if-needed
@@ -256,31 +251,25 @@ If available we use the actual program name (from (EXT:ARGV) or
        (ext:quit 69)))))
 
 
+(defun getenv (var)
+  #+ccl (ccl:getenv var)
+  #-ccl (uiop:getenv var))
 
-(defmacro redirecting-stdout-to-stderr (&body body)
-  (let ((verror  (gensym))
-        (voutput (gensym)))
-   `(let* ((,verror  nil)
-           (,voutput (with-output-to-string (stream)
-                       (let ((*standard-output* stream)
-                             (*error-output*    stream)
-                             (*trace-output*    stream))
-                         (handler-case (progn ,@body)
-                           (error (err) (setf ,verror err)))))))
-      (when ,verror
-        (terpri *error-output*)
-        (princ ,voutput *error-output*)
-        (terpri *error-output*)
-        (princ ,verror *error-output*)
-        (terpri *error-output*)
-        (terpri *error-output*)
-        #-testing (exit ex-software)))))
+(defun getuid ()
+  #+ccl (ccl::getuid)
+  #+clisp (funcall (or (function-named "getuid" "LINUX")
+                       (function-named "GETUID" "LINUX")
+                       (function-named "UID"    "POSIX")
+                       (error "How to get the process UID in ~A?" (lisp-implementation-type))))
+  #-(or ccl clisp) (error "How to get the process UID in ~A?" (lisp-implementation-type)))
 
 (defun getpid ()
-  (or (ignore-errors (find-symbol "getpid"     "LINUX"))
-      (ignore-errors (find-symbol "PROCESS-ID" "OS"))
-      (ignore-errors (find-symbol "PROCESS-ID" "SYSTEM"))))
-
+  #+ccl   (ccl::getpid)
+  #+clisp (funcall (or (ignore-errors (find-symbol "getpid"     "LINUX"))
+                       (ignore-errors (find-symbol "PROCESS-ID" "OS"))
+                       (ignore-errors (find-symbol "PROCESS-ID" "SYSTEM"))
+                       (error "How to get the process PID in ~A?" (lisp-implementation-type))))
+  #-(or ccl clisp) (error "How to get the process PID in ~A?" (lisp-implementation-type)))
 
 (defun report-the-error (err string-stream)
   (let ((log-path (format nil "/tmp/~A.~D.errors" *program-name*
@@ -298,7 +287,6 @@ If available we use the actual program name (from (EXT:ARGV) or
     (finish-output *error-output*)
     (exit ex-software)))
 
-
 (defmacro without-output (&body body)
   `(prog1 (values)
      (with-output-to-string (net)
@@ -308,6 +296,25 @@ If available we use the actual program name (from (EXT:ARGV) or
                  (*trace-output*    net))
              ,@body)
          (error (err) (report-the-error err net))))))
+
+(defmacro redirecting-stdout-to-stderr (&body body)
+  (let ((verror  (gensym))
+        (voutput (gensym)))
+    `(let* ((,verror  nil)
+            (,voutput (with-output-to-string (stream)
+                        (let ((*standard-output* stream)
+                              (*error-output*    stream)
+                              (*trace-output*    stream))
+                          (handler-case (progn ,@body)
+                            (error (err) (setf ,verror err)))))))
+       (when ,verror
+         (terpri *error-output*)
+         (princ ,voutput *error-output*)
+         (terpri *error-output*)
+         (princ ,verror *error-output*)
+         (terpri *error-output*)
+         (terpri *error-output*)
+         #-testing (exit ex-software)))))
 
 (defmacro with-pager ((&key lines) &body body)
   "
@@ -337,22 +344,22 @@ LINES     Number of line to output in a single chunk.
      ,`(progn ,@body)
      #-#.(rt-version<= "2.44" (version))
      ,(let ((pager (uiop:getenv "PAGER")))
-       (if pager
-           (let ((pager-stream (gensym)))
-             `(let ((,pager-stream (ext:make-pipe-output-stream
-                                    ,pager
-                                    :external-format charset:utf-8
-                                    :buffered nil)
-                                   ;; (ext:run-program ,pager
-                                   ;;                  :input :stream
-                                   ;;                  :output :terminal
-                                   ;;                  :wait nil)
-                                   ))
-                (unwind-protect
-                     (let ((*standard-output* ,pager-stream))
-                       ,@body)
-                  (close ,pager-stream))))
-           `(progn ,@body)))))
+        (if pager
+            (let ((pager-stream (gensym)))
+              `(let ((,pager-stream (ext:make-pipe-output-stream
+                                     ,pager
+                                     :external-format charset:utf-8
+                                     :buffered nil)
+                                    ;; (ext:run-program ,pager
+                                    ;;                  :input :stream
+                                    ;;                  :output :terminal
+                                    ;;                  :wait nil)
+                                    ))
+                 (unwind-protect
+                      (let ((*standard-output* ,pager-stream))
+                        ,@body)
+                   (close ,pager-stream))))
+            `(progn ,@body)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -372,11 +379,11 @@ LINES     Number of line to output in a single chunk.
     (when (or (null (setf match-end (position #\" argument)))
               (< match-end (length argument)))
       (loop
-         :while (setf match-beginning (position #\" argument :start start))
-         :do (setf end (1+ match-beginning)
-                   result (concatenate 'string result (subseq argument start end)
-                                       "\\" (subseq argument end (1+ end)))
-                   start (1+ end))))
+        :while (setf match-beginning (position #\" argument :start start))
+        :do (setf end (1+ match-beginning)
+                  result (concatenate 'string result (subseq argument start end)
+                                      "\\" (subseq argument end (1+ end)))
+                  start (1+ end))))
     (concatenate 'string "\"" result (subseq argument start) "\""))
   #-(or MSWINDOWS WIN32)
   (if (equal argument "")
@@ -388,11 +395,11 @@ LINES     Number of line to output in a single chunk.
             (end)
             (match-end))
         (loop
-           :while (setf match-end (position-if-not (lambda (ch) (or (alphanumericp ch) (position ch "-_./")))  argument :start start))
-           :do (setf end match-end
-                     result (concatenate 'string result (subseq argument start end)
-                                         "\\" (subseq argument end (1+ end)))
-                     start (1+ end)))
+          :while (setf match-end (position-if-not (lambda (ch) (or (alphanumericp ch) (position ch "-_./")))  argument :start start))
+          :do (setf end match-end
+                    result (concatenate 'string result (subseq argument start end)
+                                        "\\" (subseq argument end (1+ end)))
+                    start (1+ end)))
         (concatenate 'string result (subseq argument start)))))
 
 (defun shell   (command &rest arguments)
@@ -408,7 +415,7 @@ SEE ALSO:   SHELL
 "
   (uiop:run-program command :input nil :output t))
 
-(defun copy-file (file newname &optional ok-if-already-exists keep-time)
+(defun cp (file newname &optional ok-if-already-exists keep-time)
   "
 IMPLEMENTATION: The optional argument is not implemented.
 
@@ -482,44 +489,199 @@ RETURN: A string containing the response line.
 "
   (format *query-io* "~&~A: ~?" *program-name* format-string args)
   (finish-output *query-io*)
+  (clear-input *query-io*)
   (read-line *query-io*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; OPTIONS PROCESSING
+;;; COMMANDS
 ;;;
 
+;;; Note: The command structure is used at compilation-time, and at run-time:
+;;; - At compilation-time, the generate-commands.lisp script reads each
+;;;   command source file and search for the command form, using the
+;;;   :use-systems, :use-packages and :main options to compile the
+;;;   command source file.
+;;; - At run-time, the command form registers the options and documentation
+;;;   of the command for option parsing and help.
 
-
-(defparameter *options*
-  (make-hash-table :test (function equal))
-  "The dictionary of options.")
-
-
-(defstruct option
+(defstruct (option (:predicate optionp))
   keys arguments documentation function)
 
+(defclass command ()
+  ((name                 :initarg  :name
+                         :initform nil
+                         :accessor command-name)
+   (documentation        :initarg  :documentation
+                         :initform nil
+                         :accessor command-documentation)
+   (bash-completion-hook :initarg  :bash-completion-hook
+                         :initform nil
+                         :accessor command-bash-completion-hook
+                         :documentation "A function (lambda (index words) ...) that will print the completion and return true, or do nothing and return nil.")
+   (options              :initform (make-hash-table :test (function equal))
+                         :reader   command-options)
+   ;; compilation-time:
+   (pathname             :initarg  :pathname      :initform nil    :accessor command-pathname)
+   (use-systems          :initarg  :use-systems   :initform '()    :accessor command-use-systems)
+   (use-packages         :initarg  :use-packages  :initform '()    :accessor command-use-packages)
+   (main                 :initarg  :main          :initform nil)))
 
-(defun split-string (string &optional (separators " "))
+(defun command-package-name (command-name)
+  (format nil "COMMAND.~:@(~A~)" command-name))
+
+(defgeneric command-main (command)
+  (:method ((command command))
+    (or (slot-value command 'main)
+        (setf (slot-value command 'main) (format nil "~:@(~A::MAIN~)"
+                                                 (command-package-name
+                                                  (command-name  command)))))))
+
+(defun commandp (object) (typep object 'command))
+
+(defgeneric add-option (command option)
+  (:method ((command command) option)
+    (dolist (name (option-keys option) command)
+      (setf (gethash name (command-options command)) option))))
+
+(defvar *commands* (make-hash-table :test (function equal)))
+(defvar *command* nil "The current command.")
+
+(defun command-named (name)
+  (gethash name *commands*))
+
+(defun register-command (&key name pathname use-systems use-packages main
+                           documentation bash-completion-hook)
+  (setf (gethash name *commands*)
+        (make-instance 'command
+                       :name name
+                       :pathname pathname
+                       :use-systems use-systems
+                       :use-packages use-packages
+                       :main main
+                       :bash-completion-hook bash-completion-hook
+                       :documentation documentation)))
+
+(defmacro command (&key name use-systems use-packages main
+                     documentation options bash-completion-hook)
   "
-NOTE:   current implementation only accepts as separators
-        a string containing literal characters.
-"
-  (unless (simple-string-p string)     (setq string     (copy-seq string)))
-  (unless (simple-string-p separators) (setq separators (copy-seq separators)))
-  (let ((chunks  '())
-        (position 0)
-        (nextpos  0)
-        (strlen   (length string)) )
-    (declare (type simple-string string separators))
-    (loop :while (< position strlen) :do
-      (loop :while (and (< nextpos strlen) (not (position (char string nextpos) separators))) :do
-        (setq nextpos (1+ nextpos)))
-      (push (subseq string position nextpos) chunks)
-      (setf position (1+ nextpos)
-            nextpos  position))
-    (nreverse chunks)))
+This macro registers a command, and is also used as a declaration:
+it's read by the command generator script, to know the systems to be
+quickloaded,and the packages to be used by the command package.
+We can also specify a different main function than the default MAIN.
+The rest of the file will be compiled and loaded in the command package.
 
+NAME:          a string, the name of the command.
+
+Compilation-time slots:
+
+MAIN:          a string, containing the name of the symbol fbound
+               to the main function.
+USE-SYSTEMS:   a list (not evaluated) of system names.
+USE-PACKAGES:  a list (not evaluated) of package names.
+
+Run-time slots:
+
+DOCUMENTATION: a string containing the documentation of the commands.
+OPTIONS:       an expression that should return a list of clauses,
+               each clause is a list of the form:
+               ((option-name …) parsed-option) as returned by the
+               OPTION macro.
+
+RETURN:        a new command structure.
+"
+  (let ((name (or name (pathname-name (or *compile-file-truename* *load-truename*)))))
+    `(eval-when (:load-toplevel :execute)
+       (let ((command  (register-command :name ',name
+                                         :main ',main
+                                         :use-systems ',use-systems
+                                         :use-packages ',use-packages
+                                         :documentation ',documentation
+                                         :bash-completion-hook ,bash-completion-hook)))
+         (dolist (option ,options)
+           (add-option command option))
+         command))))
+
+(defparameter *default-package-use-list*
+  '("COMMON-LISP" "COM.INFORMATIMAGO.COMMAND.SCRIPT"))
+
+(defun package-set-equal-p (p q)
+  (and (subsetp p q :key (function package-name) :test (function string=))
+       (subsetp q p :key (function package-name) :test (function string=))))
+
+(defun %command-package (name package-use-list)
+  "Use PACKAGE-USE-LIST if not empty, otherwise use *DEFAULT-PACKAGE-USE-LIST*."
+  (let ((package-name (command-package-name name)))
+    (or (let ((package (find-package package-name)))
+          (when (and package package-use-list)
+            (unless (package-set-equal-p (package-use-list package) package-use-list)
+              (unuse-package (set-difference (package-use-list package) package-use-list
+                                             :key (function package-name) :test (function string=))
+                             package)
+              (use-package package-use-list package)))
+          package)
+        (make-package package-name
+                      :use (or package-use-list
+                               *default-package-use-list*)))))
+
+(defgeneric command-package (object)
+  (:documentation "Returns the package of the command. Creates it if it doesn't already exist.
+SEE: COMMAND-PACKAGE-NAME")
+  (:method ((command command))
+    (%command-package (command-name command) (command-use-packages command)))
+  (:method ((name string))
+    (let ((command (command-named name)))
+      (if command
+          (command-package command)
+          (%command-package name nil)))))
+
+(defun command-form-p (form)
+  (and (consp form) (symbolp (first form)) (string= (first form) 'command)))
+
+(defun read-command-form (source)
+  (let ((package (command-package (format nil "read command form temp package ~X" (random (expt 2 32))))))
+    (unwind-protect
+         (let ((*package* package))
+           (loop
+             :for form := (ignore-errors (read source nil source))
+             :until (eql form source)
+             :when (command-form-p form)
+               :do (return-from read-command-form form)
+             :finally (return nil)))
+      (delete-package package))))
+
+(defun register-command-file (name pathname)
+  (with-open-file (source pathname)
+    (let ((form (read-command-form source)))
+      (apply (function register-command)
+             :name name
+             :pathname pathname
+             :allow-other-keys t
+             (when (command-form-p form)
+               (rest form))))))
+
+(defun dispatch-command (pname &rest arguments)
+  "A toplevel to dispatch to commands."
+  (let* ((name    (pathname-name pname))
+         (command (command-named name)))
+    (if command
+        (progn
+          (setf com.informatimago.command.script:*command*              command
+                com.informatimago.command.script:*program-name*         name
+                com.informatimago.command.script:*default-program-name* name
+                com.informatimago.command.script:*program-path*         pname
+                com.informatimago.command.script:*arguments*            arguments)
+          (com.informatimago.command.script:exit
+           (handler-case
+               (funcall (read-from-string (command-main command)) arguments)
+             (error (err)
+               (format *error-output* "~&~A: ~A~%" name err)
+               (finish-output *error-output*)
+               com.informatimago.command.script:ex-software))))
+        (error "No such command: ~S" name))
+    (values)))
+
+;; Options:
 
 (defun q&d-parse-parameters (parameters)
   "Parses (mandatory &optional optionals... &rest rest &key key...)"
@@ -574,11 +736,6 @@ NOTE:   current implementation only accepts as separators
                               rest
                               (nreverse keys)))))
 
-
-(defun keywordize (string-designator)
-  (intern (string string-designator) (load-time-value (find-package "KEYWORD"))))
-
-
 (defun q&d-arguments (mandatories optionals rest keys)
   "
 BUG: when the optionals or keys have a present indicator,
@@ -601,15 +758,13 @@ BUG: when the optionals or keys have a present indicator,
                       (symbol (list (keywordize key) key))))
                   keys)))
 
-
 (defun wrap-option-function (keys option-arguments docstring option-function)
   (let ((vargs (gensym)))
     (multiple-value-bind (mandatories optionals rest keys-args) (q&d-parse-parameters option-arguments)
-      (setf *print-circle* nil)
       (make-option
        :keys keys
        :arguments option-arguments
-       :function (compile (make-symbol (format nil "~:@(~A-WRAPPER~)" (first keys)))
+       :function (compile (make-symbol (format nil "~@(~A-WRAPPER~)" (first keys)))
                           `(lambda (option-key ,vargs)
                              (let ((nargs (length ,vargs)))
                                (if (<= ,(length mandatories) nargs)
@@ -640,16 +795,14 @@ BUG: when the optionals or keys have a present indicator,
                                             missing-args))))))
        :documentation (split-string docstring (string #\newline))))))
 
-
-(defun call-option-function (option-key arguments &optional undefined-argument)
-  (let* ((option (gethash option-key *options*)))
+(defun call-option-function (command option-key arguments &optional undefined-argument)
+  (let ((option (gethash option-key (command-options command))))
     (cond
       (option             (funcall (option-function option) option-key arguments))
       (undefined-argument (funcall undefined-argument option-key arguments))
       (t                  (error "Unknown option ~A ; try: ~A help" option-key *program-name*)))))
 
-
-(defmacro define-option (names parameters &body body)
+(defmacro option (names parameters &body body)
   "
 DO:         Define a new option for the scirpt.
 NAMES:      A list designator of option names (strings
@@ -674,92 +827,77 @@ RETURN:     The lisp-name of the option (this is a symbol
          (body        (if (and (stringp (first body)) (rest body))
                           (rest body)
                           body)))
-    `(progn
-       (setf (gethash ',main-name *options*)
-             (wrap-option-function ',(cons main-name other-names)
-                                   ',parameters
-                                   ',docstring
-                                   (lambda ,(remove '&rest parameters)
-                                     ,docstring
-                                     (block ,lisp-name
-                                       ,@body))))
-       ,@(mapcar (lambda (other-name)
-                   `(setf (gethash ',other-name *options*) (gethash ',main-name *options*)))
-                 other-names)
-       ',lisp-name)))
+    `(wrap-option-function ',(cons main-name other-names)
+                                 ',parameters
+                                 ',docstring
+                                 (lambda ,(remove '&rest parameters)
+                                   ,docstring
+                                   (block ,lisp-name
+                                     ,@body)))))
 
-
-(defvar *documentation-text* "")
-
-(defun set-documentation-text (text)
-  (setf *documentation-text* text))
-
-(defun option-list ()
-  (let ((options '()))
-    (maphash (lambda (key option)
-               (declare (ignore key))
-               (pushnew option options))
-             *options*)
-    options))
-
-(define-option ("help" "-h" "--help") ()
-  "Give this help."
-  (with-pager ()
-      (let ((options (option-list)))
-        (format t "~2%~A options:~2%" *program-name*)
-        (dolist (option (sort options (function string<)
-                              :key (lambda (option) (first (option-keys option)))))
-          (format t "    ~{~A~^ | ~}  ~:@(~{~A ~}~)~%~@[~{~%        ~A~}~]~2%"
-                  (option-keys option)
-                  (option-arguments option)
-                  (option-documentation option)))
-        (format t "~A~%" *documentation-text*))))
-
-
+(defgeneric option-list (command)
+  (:method ((command command))
+    (let ((options '()))
+      (maphash (lambda (key option)
+                 (declare (ignore key))
+                 (pushnew option options))
+               (command-options command))
+      options)))
 
 ;; TODO: See if we couldn't simplify it, perhaps with complete -C.
 
-(defun list-all-option-keys ()
-  (let ((keys '()))
-    (dolist (option (option-list))
-      (dolist (key (option-keys option))
-        (push key keys)))
-    keys))
+(defgeneric list-all-option-keys (command)
+  (:method ((command command))
+    (let ((keys '()))
+      (dolist (option (option-list command))
+        (dolist (key (option-keys option))
+          (push key keys)))
+      keys)))
 
-(defun completion-option-prefix (prefix)
+(defun help-option ()
+  (option ("help" "-h" "--help") ()
+          "Give this help."
+          (with-pager ()
+            (let ((options (option-list *command*)))
+              (format t "~2%~A options:~2%" *program-name*)
+              (dolist (option (sort options (function string<)
+                                    :key (lambda (option) (first (option-keys option)))))
+                (format t "    ~{~A~^ | ~}  ~:@(~{~A ~}~)~%~@[~{~%        ~A~}~]~2%"
+                        (option-keys option)
+                        (option-arguments option)
+                        (option-documentation option)))
+              (format t "~@[~A~%~]" (command-documentation *command*))))))
+
+(defun completion-option-prefix (command prefix)
   (dolist (key (remove-if-not (lambda (key)
                                 (and (<= (length prefix) (length key))
                                      (string= prefix key :end2 (length prefix))))
-                              (list-all-option-keys)))
+                              (list-all-option-keys command)))
     (format t "~A~%" key))
   (finish-output))
 
-(defun completion-all-options ()
-  (dolist (key (list-all-option-keys))
+(defun completion-all-options (command)
+  (dolist (key (list-all-option-keys command))
     (format t "~A~%" key))
   (finish-output))
 
-(defvar *bash-completion-hook* nil
-  "A function (lambda (index words) ...)
-that will print the completion and return true, or do nothing and return nil.")
-
-(define-option ("--bash-completions") (index &rest words)
-  "Implement the auto-completion of arguments.
+(defun bash-completion-options ()
+  (list (option ("--bash-completions") (index &rest words)
+                "Implement the auto-completion of arguments.
 This option is designed to be invoked from the function generated by
 the '--bash-completion-function' option.  There should be no need to
 use directly.
 "
-  (let ((index (parse-integer index :junk-allowed t)))
-    (unless (and *bash-completion-hook*
-                 (funcall *bash-completion-hook* index words))
-      (if index
-          (completion-option-prefix (elt words index))
-          (completion-all-options))))
-  (exit 0))
+                (let ((index (parse-integer index :junk-allowed t)))
+                  (unless (and (command-bash-completion-hook *command*)
+                               (funcall (command-bash-completion-hook *command*) index words))
+                    (if index
+                        (completion-option-prefix *command* (elt words index))
+                        (completion-all-options *command*))))
+                (exit 0))
 
-
-(define-option ("--bash-completion-function") ()
-  "Write two bash commands (separated by a semi-colon) to create a
+        (option ("--bash-completion-function") ()
+                "Write two bash commands (separated by a semi-colon) to create a
 bash function used to do auto-completion of command arguments.
 Use it with:
 
@@ -768,32 +906,29 @@ Use it with:
 and then typing TAB on the command line after the command name will
 autocomplete argument prefixes.
 "
-  (format t "function completion_~A(){ ~
+                (format t "function completion_~A(){ ~
 COMPREPLY=( $(~:*~A --bash-completions \"$COMP_CWORD\" \"${COMP_WORDS[@]}\") ) ; } ;~
 complete -F completion_~:*~A ~:*~A~%"
-          *program-name*)
-  (exit 0))
+                        *program-name*)
+                (exit 0))))
 
-
-
-(defun parse-options (arguments &optional default undefined-argument)
+(defun parse-options (command arguments &optional default undefined-argument)
   (flet ((process-arguments ()
            (cond
              (arguments
               (loop
                  :while arguments
-                 :do (setf arguments (call-option-function (pop arguments) arguments undefined-argument))))
+                 :do (setf arguments (call-option-function command (pop arguments) arguments undefined-argument))))
              (default
               (funcall default)))))
     (if *debug*
         (process-arguments)
         (handler-case (process-arguments)
           (error (err)
-            (format *error-output* "~%ERROR: ~A~%" err)
+            (perror "~A~%" err)
             ;; TODO: select different sysexits codes depending on the error class.
             (return-from parse-options ex-software)))))
   0)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -803,7 +938,6 @@ complete -F completion_~:*~A ~:*~A~%"
          function-name
          (lisp-implementation-type)))
 
-
 (defun prepare-options (options)
   (mapcar (lambda (option)
             (typecase option
@@ -812,9 +946,6 @@ complete -F completion_~:*~A ~:*~A~%"
               (string  option)
               (t       (prin1-to-string option))))
           options))
-
-
-
 
 (defun run-program (program-and-arguments &key (input :terminal) (output :terminal)
                     (if-output-exists :error) (wait t))
@@ -828,10 +959,9 @@ SEE ALSO:   SHELL
 (defun uname (&rest options)
   "Without OPTIONS, return a keyword naming the system (:LINUX, :DARWIN, etc).
 With options, returns the first line output by uname(1)."
-  (with-open-stream (uname (uiop:run-program (cons "uname" (prepare-options options))
-                                             :input nil
-                                             :output :stream
-                                             :wait nil))
+  (with-open-stream (uname #+ccl (ccl:run-program "uname" (prepare-options options)
+                                                  :input nil :output :stream :wait nil)
+                           #-ccl (error "run-program not implemented yet"))
     (values (if options
                 (read-line uname)
                 (intern (string-upcase (read-line uname))
@@ -852,52 +982,6 @@ that are accessible by the user."
 
 (defun concat (&rest items) (apply (function concatenate) 'string items))
 
-(defun mapconcat (function sequence separator)
-  (etypecase sequence
-    (list
-     (if sequence
-         (let* ((items (mapcar (lambda (item)
-                                 (let ((sitem (funcall function item)))
-                                   (if (stringp sitem)
-                                       sitem
-                                       (princ-to-string sitem))))
-                               sequence))
-                (ssepa (if (stringp separator)
-                           separator
-                           (princ-to-string separator)))
-                (size (+ (reduce (function +) items :key (function length))
-                         (* (length ssepa) (1- (length items)))))
-                (result (make-array size :element-type 'character))
-                (start  0))
-           (replace result  (first items) :start1 start)
-           (incf start (length (first items)))
-           (dolist (item (rest items))
-             (replace result ssepa :start1 start) (incf start (length ssepa))
-             (replace result item  :start1 start) (incf start (length item)))
-           result)
-         ""))
-    (vector
-     (if (plusp (length sequence))
-         (let* ((items (map 'vector (lambda (item)
-                                      (let ((sitem (funcall function item)))
-                                        (if (stringp sitem)
-                                            sitem
-                                            (princ-to-string sitem))))
-                            sequence))
-                (ssepa (if (stringp separator)
-                           separator
-                           (princ-to-string separator)))
-                (size (+ (reduce (function +) items :key (function length))
-                         (* (length ssepa) (1- (length items)))))
-                (result (make-array size :element-type 'character))
-                (start  0))
-           (replace result (aref items 0) :start1 start) (incf start (length (aref items 0)))
-           (loop
-              :for i :from 1 :below (length items)
-              :do (replace result ssepa :start1 start) (incf start (length ssepa))
-              (replace result (aref items i) :start1 start) (incf start (length (aref items i))))
-           result)
-         ""))))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ;;;
@@ -921,6 +1005,11 @@ that are accessible by the user."
 ;; (redirecting-stdout-to-stderr (asdf:oos 'asdf:load-op :split-sequence)
 ;;                               (asdf:oos 'asdf:load-op :cl-ppcre))
 
+(defun initialize ()
+  (setf *program-path* (program-path)
+        *program-name* (file-namestring *program-path*)
+        *arguments*    (arguments))
+  (values))
 
 (defun run-main (main)
   (handler-case (uiop:quit (funcall main uiop:*command-line-arguments*))
@@ -928,5 +1017,7 @@ that are accessible by the user."
       (format *error-output* "~&~A~%" err)
       (finish-output *error-output*)
       (uiop:quit 1))))
+
+
 
 ;;;; THE END ;;;;

@@ -161,30 +161,6 @@ Signals an error if they exit with an error status or are killed by a signal."
 
 (defvar *radio-list-format* "~:{~20A ~S~%~}")
 
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script."
-  (format t "~A ~A~%" *program-name* *program-version*))
-
-(define-option ("verbose" "-v" "--verbose") ()
-  "Report writes the underlying commands that are run."
-  (setf *verbose* t))
-
-(define-option ("url" "-U" "-url" "--url") (radio-station)
-  "Prints the URL of the radio station and exit."
-  (let ((radio (get-radio-station radio-station)))
-    (if radio
-        (format t "~A" (second radio))
-        (error "There is no radio station named ~S" radio-station)))
-  (exit ex-ok))
-
-(define-option ("record" "-r" "--record") ()
-  "Records the stream while listening."
-  (setf *do-record* t))
-
-(define-option ("list-stations" "list"  "-l" "-ls" "--list" "--list-stations") ()
-  "Prints the list of radio stations and exit."
-  (format t *radio-list-format* *radio-urls*)
-  (exit ex-ok))
 
 (defun completion-station-prefix (prefix)
   (format t "~(~{~A~%~}~)"  (remove-if-not (lambda (key)
@@ -197,16 +173,44 @@ Signals an error if they exit with an error status or are killed by a signal."
   (format t "~(~{~A~%~}~)" (get-radio-station-names))
   (finish-output))
 
-(defun main (args)
+(command :bash-completion-hook (lambda (index words)
+                                 (if index
+                                     (completion-station-prefix (elt words index))
+                                     (completion-all-stations))
+                                 nil)
+         :options (list*
+                   (option ("version" "-V" "--version") ()
+                           "Report the version of this script."
+                           (format t "~A ~A~%" *program-name* *program-version*))
+
+                   (option ("verbose" "-v" "--verbose") ()
+                           "Report writes the underlying commands that are run."
+                           (setf *verbose* t))
+
+                   (option ("url" "-U" "-url" "--url") (radio-station)
+                           "Prints the URL of the radio station and exit."
+                           (let ((radio (get-radio-station radio-station)))
+                             (if radio
+                                 (format t "~A" (second radio))
+                                 (error "There is no radio station named ~S" radio-station)))
+                           (exit ex-ok))
+
+                   (option ("record" "-r" "--record") ()
+                           "Records the stream while listening."
+                           (setf *do-record* t))
+
+                   (option ("list-stations" "list"  "-l" "-ls" "--list" "--list-stations") ()
+                           "Prints the list of radio stations and exit."
+                           (format t *radio-list-format* *radio-urls*)
+                           (exit ex-ok))
+
+                   (help-option)
+                   (bash-completion-options)))
+
+(defun main (arguments)
   (setf *debug* nil)
-  (setf *bash-completion-hook*
-        (lambda (index words)
-          (if index
-              (completion-station-prefix (elt words index))
-              (completion-all-stations))
-          nil))
-  (parse-options args
-                 (lambda () (call-option-function "help" '()))
+  (parse-options *command* arguments
+                 (lambda () (call-option-function *command* "help" '()))
                  (lambda (name arguments)
                      (let* ((radio (get-radio-station name)))
                        (if radio

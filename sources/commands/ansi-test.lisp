@@ -39,9 +39,6 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :use-systems (:com.informatimago.common-lisp)
-         :main "COM.INFORMATIMAGO.COMMAND.ANSI-TEST:MAIN")
-
 (defpackage "E48"
   (:use)
   (:export "ACK" "APC" "BEL" "BPH" "BS" "CAN" "CBT" "CCH" "CHA" "CHT"
@@ -67,7 +64,6 @@
   (com.informatimago.common-lisp.cesarum.ecma048:define-all-functions
         :export cl:t :8-bit cl:nil :print cl:t :result-type cl:string))
 
-
 (cl:in-package "COMMON-LISP-USER")
 (defpackage "COM.INFORMATIMAGO.COMMAND.ANSI-TEST"
   (:use "COMMON-LISP"
@@ -79,9 +75,14 @@
 
 (defparameter *program-version* "1.0.2")
 (defparameter *program-name* "ansi-test")
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script."
-  (format t "~A ~A~%" *program-name* *program-version*))
+
+(command :use-systems (:com.informatimago.common-lisp)
+         :main "COM.INFORMATIMAGO.COMMAND.ANSI-TEST:MAIN"
+         :options (list* (option ("version" "-V" "--version") ()
+                                 "Report the version of this script."
+                                 (format t "~A ~A~%" *program-name* *program-version*))
+                         (help-option)
+                         (bash-completion-options)))
 
 (defenum sgr-codes
   "
@@ -236,7 +237,7 @@
 
 (defun main (arguments)
   (catch 'go-on
-    (parse-options arguments (lambda () (throw 'go-on t)))
+    (parse-options *command* arguments (lambda () (throw 'go-on t)))
     (exit ex-usage))
   (ansi-test)
   ex-ok)

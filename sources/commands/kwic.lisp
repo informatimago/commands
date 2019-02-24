@@ -1,18 +1,12 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
 (command :use-systems (:split-sequence :com.informatimago.common-lisp.cesarum)
-         :main "COM.INFORMATIMAGO.COMMAND.KWIC:MAIN")
-
-(defpackage "COM.INFORMATIMAGO.COMMAND.KWIC"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "SPLIT-SEQUENCE"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST")
-  (:shadowing-import-from "SCRIPT" "CONCAT" "MAPCONCAT" "COPY-FILE")
-  (:export "MAIN"))
-(in-package "COM.INFORMATIMAGO.COMMAND.KWIC")
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "SPLIT-SEQUENCE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST"))
 
 (defun wl-lessp (a b)
   (cond

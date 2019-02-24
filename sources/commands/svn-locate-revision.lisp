@@ -41,7 +41,6 @@
         "SCRIPT"
         "XMLS"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING")
-  (:shadowing-import-from "SCRIPT" "CONCAT" "MAPCONCAT")
   (:export "MAIN"))
 (in-package "SVN-LOCATE-REVISION")
 

@@ -84,15 +84,16 @@
 (defparameter *start-index*      nil)
 (defparameter *directory-format* "cd~2,'0D")
 
-(define-option ("-b" "--batch") (start-index)
+(command :options (list
+(option ("-b" "--batch") (start-index)
   ""
   (setf *start-index* (parse-integer start-index)))
 
-(define-option ("-f" "--directory-format") (format)
+(option ("-f" "--directory-format") (format)
   (setf *directory-format* format))
 
-(define-option ("-o" "--one-shoot") (directory)
-  (cpcd directory))
+(option ("-o" "--one-shoot") (directory)
+  (cpcd directory)))
 
 
 #|

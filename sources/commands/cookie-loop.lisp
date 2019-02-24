@@ -1,7 +1,5 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
-(defun getenv (var) (uiop:getenv var))
-
 
 (defparameter *escape*    (code-char 27))
 (defparameter *normal*    (format nil "~C[0m" *escape*))

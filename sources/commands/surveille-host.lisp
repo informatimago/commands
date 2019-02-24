@@ -183,8 +183,9 @@ DO:    If there is already a remote with the same IP-ADDRESS
     (maphash (lambda (key remote)
                (declare (ignore key))
                (setf (check-period remote) period)
-               (setf (period (activity remote)) period)) *remotes*))
-  (activity-run :debug nil)
+               (setf (period (activity remote)) period))
+             *remotes*))
+  (activity-run)
   ex-ok)
 
 ;;;; THE END ;;;;

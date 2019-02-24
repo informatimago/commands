@@ -38,18 +38,8 @@
 ;;;;    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ;;;;******************************************************************************
 
-
-
-(set-documentation-text
- "See also: http://www.galactic-guide.com/articles/2R10.html
-
-")
-
-(defparameter *religion-pathname*
-  (make-pathname :name "RELIGIONS" :type "DATA" :version NIL :case :common
-                 :defaults (user-homedir-pathname)))
+(defvar *religion-pathname*)
 ;; Could be a common file such as /usr/local/share/lib/religions or whatever..
-
 
 
 ;;;-----------------------------------------------------------------
@@ -320,7 +310,7 @@ of the religion."))
                       :if-does-not-exist :create)
     (format stream "~:{~A:~A~%~}" db)))
 
-(defparameter *religion-db* (load-religion-database *religion-pathname*))
+(defvar *religion-db*)
 
 (defun lookup-names (code)
   (mapcar (function second)
@@ -609,55 +599,55 @@ of the religion."))
             (format t "~A~%" line))))))
 
 
+(command :documentation "See also: http://www.galactic-guide.com/articles/2R10.html"
+         :options (list* (option ("-g" "--generate") ()
+                                 "Generate a random religion."
+                                 (princ (generate)) (terpri)
+                                 (finish-output))
 
-(define-option ("-g" "--generate") ()
-  "Generate a random religion."
-  (princ (generate)) (terpri)
-  (finish-output))
 
-
-(define-option ("-G" "--generate-and-explain") ()
-  "Generate and explain random religion.
+                         (option ("-G" "--generate-and-explain") ()
+                                 "Generate and explain random religion.
 The code is generated and output to stderr,
 while the explainations are written to stdout."
-  (let ((religion-code (generate)))
-    (princ religion-code *error-output*) (terpri *error-output*)
-    (finish-output *error-output*)
-    (explain religion-code)))
+                                 (let ((religion-code (generate)))
+                                   (princ religion-code *error-output*) (terpri *error-output*)
+                                   (finish-output *error-output*)
+                                   (explain religion-code)))
 
-(define-option ("-e" "--explain") (religion-code)
-  "Explain a religion code."
-  (cond
-    ((code-valid-p religion-code) (explain religion-code))
-    ((lookup-code religion-code)  (explain (lookup-code religion-code)))
-    (t                            (explain religion-code))))
+                         (option ("-e" "--explain") (religion-code)
+                                 "Explain a religion code."
+                                 (cond
+                                   ((code-valid-p religion-code) (explain religion-code))
+                                   ((lookup-code religion-code)  (explain (lookup-code religion-code)))
+                                   (t                            (explain religion-code))))
 
-(define-option ("-i" "--interactive") ()
-  "Creates a religion interactively."
-  (interactive))
+                         (option ("-i" "--interactive") ()
+                                 "Creates a religion interactively."
+                                 (interactive))
 
-(define-option ("-l" "--list") ()
-  "List known religions."
-  (loop
-     :for (code name) :in (sort *religion-db* (function string<) :key (function line-code))
-     :initially (progn
-                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")
-                  (format t " ~9D  ~:(~A~)~%" "Code" "Name")
-                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------"))
-     :do (format t " ~9D  ~:(~A~)~%" code name)
-     :finally (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")))
+                         (option ("-l" "--list") ()
+                                 "List known religions."
+                                 (loop
+                                   :for (code name) :in (sort *religion-db* (function string<) :key (function line-code))
+                                     :initially (progn
+                                                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")
+                                                  (format t " ~9D  ~:(~A~)~%" "Code" "Name")
+                                                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------"))
+                                   :do (format t " ~9D  ~:(~A~)~%" code name)
+                                   :finally (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")))
 
 
-(define-option ("-V" "--version") ()
-  "Prints the version of this script."
-  (format t "~A version 2.0~%Running on ~A ~A~%"
-          *program-name*
-          (lisp-implementation-type) (lisp-implementation-version)))
+                         (option ("-V" "--version") ()
+                                 "Prints the version of this script."
+                                 (format t "~A version 2.0~%Running on ~A ~A~%"
+                                         *program-name*
+                                         (lisp-implementation-type) (lisp-implementation-version)))
 
-(define-option ("-C" "--copyright") ()
-  "Prints the version of this script."
-  (format t "~A copyright and license:~%" *program-name*)
-  (format t "
+                         (option ("-C" "--copyright") ()
+                                 "Prints the version of this script."
+                                 (format t "~A copyright and license:~%" *program-name*)
+                                 (format t "
     Copyright Pascal J. Bourguignon 2002 - 2010
 
     mailto:pjb@informatimago.com
@@ -677,11 +667,16 @@ while the explainations are written to stdout."
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 "))
+                         (help-option)
+                         (bash-completion-options)))
 
 (defun main (arguments)
-  (setf *debug* t)
-  (setf *random-state* (make-random-state t))
-  (parse-options arguments)
+  (setf *religion-pathname* (make-pathname :name "RELIGIONS" :type "DATA" :version NIL :case :common
+                                           :defaults (user-homedir-pathname))
+        *religion-db* (load-religion-database *religion-pathname*)
+        *debug* t
+        *random-state* (make-random-state t))
+  (parse-options *command* arguments)
   ex-ok)
 
 ;;;; THE END ;;;;

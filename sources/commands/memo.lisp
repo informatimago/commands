@@ -2,7 +2,7 @@
 
 ;;----------------------------------------------------------------------
 
-(defun optionp (options key)
+(defun contains-option-p (options key)
   (if (atom options)
       (string= options key)
       (member key options :test (function string=))))
@@ -34,10 +34,10 @@
 (defun days-from-duration (n units)
   (* n
      (cond
-       ((optionp '("day"   "days")   units)   1)
-       ((optionp '("week"  "weeks")  units)   7)
-       ((optionp '("month" "months") units)  30)
-       ((optionp '("year"  "years")  units) 365)
+       ((contains-option-p '("day"   "days")   units)   1)
+       ((contains-option-p '("week"  "weeks")  units)   7)
+       ((contains-option-p '("month" "months") units)  30)
+       ((contains-option-p '("year"  "years")  units) 365)
        (t (error "Invalid time unit: ~S" units)))))
 
 (defun duration-label (days)
@@ -179,11 +179,11 @@
 
 (defun add-memo (text)
   (let (date duration)
-    (when (optionp "from" (first text))
+    (when (contains-option-p "from" (first text))
       (pop text)
       (setf date (pop text))
       (ut-from-date date)
-      (when (optionp "for" (first text))
+      (when (contains-option-p "for" (first text))
         (pop text)
         (setf duration (days-from-duration (parse-integer (pop text)
                                                           :junk-allowed nil)
@@ -201,12 +201,12 @@
   (let ((key (first argv)))
     (handler-case
         (COND
-          ((or (null argv) (optionp (opts "help") key))  (print-usage))
-          ((optionp (opts "list")   key)     (list-memos))
-          ((optionp (opts "show")   key)     (show-memos))
-          ((optionp (opts "add")    key)     (add-memo     (rest   argv)))
-          ((optionp (opts "remove") key)     (remove-memo  (second argv)))
-          ((optionp (opts "purge")  key)     (purge-memos))
+          ((or (null argv) (contains-option-p (opts "help") key))  (print-usage))
+          ((contains-option-p (opts "list")   key)     (list-memos))
+          ((contains-option-p (opts "show")   key)     (show-memos))
+          ((contains-option-p (opts "add")    key)     (add-memo     (rest   argv)))
+          ((contains-option-p (opts "remove") key)     (remove-memo  (second argv)))
+          ((contains-option-p (opts "purge")  key)     (purge-memos))
           (t  (format *error-output* "Invalid option: ~S~%" key)
               (print-usage)))
       (error (err)

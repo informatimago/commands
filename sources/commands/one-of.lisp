@@ -39,40 +39,40 @@
 ;;;;**************************************************************************
 
 (defparameter *program-version* "0.1.2")
-
-
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script."
-  (format t "~A ~A~%" *program-name* *program-version*))
-
 (defvar *probability* nil)
 (defvar *count*       nil)
-(defvar *items*  '())
+(defvar *items*       '())
 
-(define-option ("-p" "--probability") (probability)
-  "
+(command :options (list*
+
+                   (option ("version" "-V" "--version") ()
+                           "Report the version of this script."
+                           (format t "~A ~A~%" *program-name* *program-version*))
+
+                   (option ("-p" "--probability") (probability)
+                           "
 PROBABILITY is a number between 0.0 and 1.0.
 
 Prints a random selection of the remaining arguments, each having
 probability PROBABILITY of being selected (which means that a mean
 of PROBABILITY*{nb of arguments} arguments are printed).
 "
-  (setf *probability*
-        (with-standard-io-syntax
-          (let ((*read-eval* nil)
-                (argument  probability))
-            (let ((probability (read-from-string probability)))
-              (assert (realp probability)
-                      (probability)
-                      "The probability must be a real number, not ~S" argument)
-              (assert (<= 0.0 probability 1.0)
-                      (probability)
-                      "The probability must be a real number between 0.0 and 1.0,  ~A is too ~:[big~;small~]."
-                      probability (< probability 0.0))
-              probability)))))
+                           (setf *probability*
+                                 (with-standard-io-syntax
+                                   (let ((*read-eval* nil)
+                                         (argument  probability))
+                                     (let ((probability (read-from-string probability)))
+                                       (assert (realp probability)
+                                               (probability)
+                                               "The probability must be a real number, not ~S" argument)
+                                       (assert (<= 0.0 probability 1.0)
+                                               (probability)
+                                               "The probability must be a real number between 0.0 and 1.0,  ~A is too ~:[big~;small~]."
+                                               probability (< probability 0.0))
+                                       probability)))))
 
-(define-option ("-c" "--count") (count)
-  "
+                   (option ("-c" "--count") (count)
+                           "
 COUNT is an integer.
 
 Prints COUNT items selected at random from the remaining arguments.
@@ -80,19 +80,24 @@ Prints COUNT items selected at random from the remaining arguments.
 Each item is taken only once, if COUNT is greater than the number of
 remaining arguments, then they're all printed in random order.
 "
-  (setf *count*
-        (with-standard-io-syntax
-          (let ((*read-eval* nil)
-                (argument count))
-            (let ((count (read-from-string count)))
-              (assert (integerp count)
-                      (count)
-                      "The COUNT must be an integer, not ~S" argument)
-              (assert (< 0 COUNT)
-                      (count)
-                      "The COUNT must be a strictly-positive number,  ~A is too ~:[big~;small~]."
-                      count (<= count 0))
-              count)))))
+                           (setf *count*
+                                 (with-standard-io-syntax
+                                   (let ((*read-eval* nil)
+                                         (argument count))
+                                     (let ((count (read-from-string count)))
+                                       (assert (integerp count)
+                                               (count)
+                                               "The COUNT must be an integer, not ~S" argument)
+                                       (assert (< 0 COUNT)
+                                               (count)
+                                               "The COUNT must be a strictly-positive number,  ~A is too ~:[big~;small~]."
+                                               count (<= count 0))
+                                       count)))))
+
+                   (help-option)
+                   (bash-completion-options)))
+
+
 
 (defun one-of (sequence)
   (elt sequence (random (length sequence))))
@@ -112,11 +117,13 @@ remaining arguments, then they're all printed in random order.
    (rotatef (first current) (elt current (random length)))))
 
 (defun main (arguments)
+  (setf *probability* nil
+        *count*       nil
+        *items*       '()
+        *debug*       t
+        *random-state* (make-random-state t))
 
-  (setf *debug* t)
-  (setf *random-state* (make-random-state t))
-
-  (parse-options arguments
+  (parse-options *command* arguments
                  nil   ; (lambda () (call-option-function "help" '()))
                  (lambda (name arguments)
                    (push name *items*)

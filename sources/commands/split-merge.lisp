@@ -146,26 +146,29 @@
 
 ;;;------------------------------------------------------------
 
-
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script."
-  (format t "~A ~A~%" *program-name* *program-version*))
-
-(define-option ("verbose" "-v" "--verbose") ()
-  "Report writes the underlying commands that are run."
-  (setf *verbose* t))
-
-
 (defvar *left-path* nil)
 (defvar *right-path* nil)
 
-(define-option ("left" "-l" "--left") (path)
-  "Specifies the path of the left output file."
-  (setf *left-path* path))
+(command :options (list*
 
-(define-option ("right" "-l" "--right") (path)
-  "Specifies the path of the right output file."
-  (setf *right-path* path))
+                   (option ("version" "-V" "--version") ()
+                     "Report the version of this script."
+                     (format t "~A ~A~%" *program-name* *program-version*))
+
+                   (option ("verbose" "-v" "--verbose") ()
+                     "Report writes the underlying commands that are run."
+                     (setf *verbose* t))
+
+                   (option ("left" "-l" "--left") (path)
+                     "Specifies the path of the left output file."
+                     (setf *left-path* path))
+
+                   (option ("right" "-l" "--right") (path)
+                     "Specifies the path of the right output file."
+                     (setf *right-path* path))
+
+                   (help-option)
+                   (bash-completion-options)))
 
 
 
@@ -190,17 +193,14 @@
 
 (defvar *input-path* nil)
 
-(defun main (args)
-
-  (parse-options args
+(defun main (arguments)
+  (parse-options *command* arguments
                  (lambda ()
-                   (call-option-function "help" '()))
+                   (call-option-function *command* "help" '()))
                  (lambda (input-path arguments)
                    (setf *input-path* input-path)
                    arguments))
-
   (split-merge-file *input-path* *left-path* *right-path*)
-
   ex-ok)
 
 

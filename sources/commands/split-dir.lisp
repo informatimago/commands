@@ -124,7 +124,7 @@
                             :arguments (list "-f" "-s" src dst)))
 (defun move     (src dst) (uiop:run-program "mv" :arguments (list src dst)))
 
-(defun optionp (arg options) (member arg options :test (function string=)))
+(defun contains-option-p (arg options) (member arg options :test (function string=)))
 
 (defun main (arguments)
   (let ((max-size nil)
@@ -134,11 +134,11 @@
         (collate  (function symlink)))
     (dolist (arg arguments)
       (cond
-        ((optionp arg '("-h" "--help"))     (print-help) (return-from main))
-        ((optionp arg '("-p" "--preview"))  (setf preview t))
-        ((optionp arg '("-L" "--symlink"))  (setf collate (function symlink)))
-        ((optionp arg '("-M" "--move"))     (setf collate (function move)))
-        ((optionp arg '("-H" "--hardlink")) (setf collate (function hardlink)))
+        ((contains-option-p arg '("-h" "--help"))     (print-help) (return-from main))
+        ((contains-option-p arg '("-p" "--preview"))  (setf preview t))
+        ((contains-option-p arg '("-L" "--symlink"))  (setf collate (function symlink)))
+        ((contains-option-p arg '("-M" "--move"))     (setf collate (function move)))
+        ((contains-option-p arg '("-H" "--hardlink")) (setf collate (function hardlink)))
         ((char= #\- (char arg 0)) (error "Invalid option ~A" arg))
         ((null max-size) (setf max-size (* (mantissa arg) (factor arg))))
         ((null src-dir)  (setf src-dir arg))

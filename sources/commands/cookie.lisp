@@ -53,8 +53,6 @@
     "/home/pjb/pjb.cookies"))
 
 
-(defun getenv (var) (uiop:getenv var))
-
 (defun configure-cookie-files ()
   (setf *default-table-path* nil
         *default-files*
@@ -143,7 +141,7 @@
 
 
 
-(defun optionp (options arguments)
+(defun starts-with-option-p (options arguments)
   (if (atom options)
       (member options arguments :test (function string-equal))
       (some (lambda (option) (member option arguments :test (function string-equal)))
@@ -157,13 +155,13 @@
 (defun main (argv)
   (setf *random-state* (make-random-state t))
   (cond
-    ((optionp '("--help" "-h") argv)
+    ((starts-with-option-p '("--help" "-h") argv)
      (usage))
-    ((optionp '("--list-files" "-l") argv)
+    ((starts-with-option-p '("--list-files" "-l") argv)
      (configure-cookie-files)
      (list-files))
     (t
-     (let ((file (optionp '("--file" "-f") argv)))
+     (let ((file (starts-with-option-p '("--file" "-f") argv)))
        (format t "~&")
        (if file
            (cookie-from-file (second file))

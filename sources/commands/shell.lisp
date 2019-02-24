@@ -35,7 +35,8 @@
 ;;;;******************************************************************************
 
 (defpackage "COM.INFORMATIMAGO.CINE-SHELL"
-  (:use "COMMON-LISP" "SCRIPT"))
+  (:use "COMMON-LISP" "SCRIPT")
+  (:export "MAIN"))
 (in-package "COM.INFORMATIMAGO.CINE-SHELL")
 (defparameter *program-version* "0.0.2")
 
@@ -51,11 +52,6 @@ les spectateurs sont invités
     pour tous publics.
 
 |#
-
-
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script and the underlying package system."
-  (format t "~A ~A~%" *program-name* *program-version*))
 
 
 
@@ -243,25 +239,29 @@ les spectateurs sont invités
       (socket:socket-server-close listener))))
 
 
+(command :main "COM.INFORMATIMAGO.CINE-SHELL:MAIN"
+         :options (list*
+                   (option ("version" "-V" "--version") ()
+                           "Report the version of this script and the underlying package system."
+                           (format t "~A ~A~%" *program-name* *program-version*))
 
+                   (option ("list-shells" "-ls" "--list") ()
+                           "List the known cine shells."
+                           (format t "~:{~A~%~}~%" *shells*))
 
-(define-option ("list-shells" "-ls" "--list") ()
-  "List the known cine shells."
-  (format t "~:{~A~%~}~%" *shells*))
+                   (option ("random" "-r" "--random") (port)
+                           "Run a random cine shell."
+                           (run-cine-shell))
 
-(define-option ("random" "-r" "--random") (port)
-  "Run a random cine shell."
-  (run-cine-shell))
+                   (option ("sh" "-s" "--shell") ()
+                           "Run a sh-shell."
+                           (sh-shell))
 
-(define-option ("sh" "-s" "--shell") ()
-  "Run a sh-shell."
-  (sh-shell))
-
-(define-option ("listen" "-l" "--listen") (port)
-  "Listen to the PORT for incoming shell connections."
-  (run-cine-server port))
-
-
+                   (option ("listen" "-l" "--listen") (port)
+                           "Listen to the PORT for incoming shell connections."
+                           (run-cine-server port))
+                   (help-option)
+                   (bash-completion-options)))
 
 
 ;;;---------------------------------------------------------------------
@@ -3053,6 +3053,7 @@ OTHER                 05   OTHER                 05
 ;;; Run it
 ;;;---------------------------------------------------------------------
 
-(parse-options ext:*args*)
+(defun main (arguments)
+  (parse-options *command* arguments))
 
 ;;;; THE END ;;;;

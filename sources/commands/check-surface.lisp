@@ -36,7 +36,7 @@
 ;;;;****************************************************************************
 
 (command :use-systems (:com.informatimago.clmisc)
-         :use-packages ("COM.INFORMATIMAGO.CLMISC.RESOURCE-UTILIZATION"))
+         :use-packages ("COMMON-LISP" "SCRIPT" "COM.INFORMATIMAGO.CLMISC.RESOURCE-UTILIZATION"))
 
 (defun usage ()
   (format

@@ -20,8 +20,7 @@
 ;;;; management system (hence the need of this tool!).
 ;;;;
 
-(command :use-systems (:cl-ppcre)
-         :main "FRONT-END-UNIX-PACKAGE-MANAGEMENT:MAIN")
+
 
 (defpackage "FRONT-END-UNIX-PACKAGE-MANAGEMENT"
   (:use "COMMON-LISP" "SCRIPT")
@@ -53,7 +52,136 @@ management system (hence the need of this tool!).
 
 (defparameter *program-version* "0.0.3")
 
-(defparameter *usage*
+(defmacro fpm (key &rest arguments)
+  `(fpm-operate (quote ,key) ,@arguments))
+
+(command :use-systems (:cl-ppcre)
+         :main "FRONT-END-UNIX-PACKAGE-MANAGEMENT:MAIN"
+         :options (list* (option ("version" "-V" "--version") ()
+                                 "Report the version of this script and the underlying package system."
+                                 (format t "~A ~A~%" *program-name* *program-version*)
+                                 (fpm version))
+
+
+                         (option ("verbose" "-v" "--verbose") ()
+                                 "Report writes the underlying commands that are run."
+                                 (setf *verbose* t))
+
+
+                         (option ("install" "-I" "--install") (package-name)
+                                 "Install the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version according to the
+underlying package system syntax."
+                                 (fpm install package-name))
+
+
+                         (option ("update" "-U" "--update") (package-name)
+                                 "Updates the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version or version constraint
+according to the underlying package system syntax."
+                                 (fpm update package-name))
+
+
+                         (option ("remove" "-R" "--remove" "uninstall" "--uninstall") (package-name)
+                                 "Uninstalls the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version or version constraint
+according to the underlying package system syntax.
+"
+                                 (fpm remove package-name))
+
+
+                         (option ("show-info" "info" "-i" "--show-info" "--info") (package-name)
+                                 ;; [show] info <package-name>
+                                 "Displays information about the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version or version constraint
+according to the underlying package system syntax.
+This package may be installed or not.
+"
+                                 (fpm info package-name))
+
+
+                         (option  ("list-packages" "-p" "--list-packages" "list-package"
+                                                   "list" "packages" "package")
+                                  (&rest qualifier-and-package-pattern)
+                                  ;; [list] [installed|available|all|not-installed|required] packages [<package-pattern>]
+                                  "Lists the packages and versions matching the PACKAGE-PATTERN or
+all the packages if omited.   The keywords installed, available,
+all or not installed restrict the listing to the correponding
+package.  available and all are synonyms and the default."
+                                  (let ((valid-qualifiers  '(installed available all not-installed required)))
+                                    (when (null qualifier-and-package-pattern)
+                                      (error "Missing a PACKAGE-PATTERN"))
+                                    (let ((qualifier
+                                            (cond
+                                              ((member (first qualifier-and-package-pattern) valid-qualifiers
+                                                       :test (function string-equal))
+                                               (pop  qualifier-and-package-pattern))
+                                              ((< 1 (length qualifier-and-package-pattern))
+                                               (error "Too many arguments: ~{~A~^ ~}" qualifier-and-package-pattern))
+                                              (t
+                                               'all)))
+                                          (package-pattern (first qualifier-and-package-pattern)))
+                                      (fpm list-packages
+                                           (intern (string-upcase qualifier) "KEYWORD") t
+                                           :pattern package-pattern))))
+
+
+                         (option ("list-files" "files" "-l" "--list-files" "--files" "list-file" "file"
+                                               "contents" "content") (package-name)
+                                               ;; [list] files [in] <package-name>
+                                               "Lists the full pathnames of the files in the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version or version constraint
+according to the underlying package system syntax.
+This package may be installed or not.
+"
+                                               (fpm list-files package-name))
+
+
+                         (option ("package-containing" "package" "-c" "--package-containing"
+                                                       "who-owns" "owns" "owner") (file-path)
+                                                       ;; package [containing] [file] <file-path>
+                                                       "Lists the package(s) containing the file FILE-PATH.  If file path
+is not an absolute pathname, then it's taken as a pattern for the
+file paths."
+                                                       (fpm find-package-containing-file file-path))
+
+
+
+                         (option ("search-package-info" "search-package" "search"
+                                                        "-s"
+                                                        "--search-package-info" "--search-package" "--search") (pattern)
+                                                        ;; search [package] [info] <pattern>
+                                                        "Lists the packages that have the <pattern> in their package information."
+                                                        (fpm find-package-with-info pattern))
+
+
+
+                         (option ("show-dependencies" "dependencies" "-d" "--show-dependencies" "--dependencies") (package-name)
+                                 ;; [show] dependencies [of] [package] <package-name>
+                                 "List the packages on which the package named PACKAGE-NAME depends.
+PACKAGE-NAME may include some specific version according to the
+underlying package system syntax.
+[installed|newest]
+"
+                                 (fpm dependencies package-name))
+
+
+
+                         (option ("who-depends-on" "depends" "--who-depends-on" "--who-depends" "--depends") (package-name)
+                                 ;; [who] depends [on] [package] <package-name>
+                                 "List the packages who depend on the package named PACKAGE-NAME.
+PACKAGE-NAME may include some specific version according to the
+underlying package system syntax.
+"
+                                 (fpm dependants package-name))
+
+                         (help-option)
+                         (bash-completion-options)))
+
+
+
+
+#-(and) (defparameter *usage*
   "
 ~A~:* version
 
@@ -138,8 +266,7 @@ management system (hence the need of this tool!).
 
 ")
 
-(defun print-usage ()
-  (format t *usage* *program-name*))
+
 
 
 (defmacro alt (&body body)
@@ -797,134 +924,10 @@ or an expression such as (= <package>)  (<= <package>) etc."))
       (error "Invalid key ~A" key)))
 
 
-(defmacro fpm (key &rest arguments)
-  `(fpm-operate (quote ,key) ,@arguments))
+
 
 
 ;;;------------------------------------------------------------
-
-
-
-(define-option ("version" "-V" "--version") ()
-  "Report the version of this script and the underlying package system."
-  (format t "~A ~A~%" *program-name* *program-version*)
-  (fpm version))
-
-
-(define-option ("verbose" "-v" "--verbose") ()
-  "Report writes the underlying commands that are run."
-  (setf *verbose* t))
-
-
-(define-option ("install" "-I" "--install") (package-name)
- "Install the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version according to the
-underlying package system syntax."
- (fpm install package-name))
-
-
-(define-option ("update" "-U" "--update") (package-name)
-  "Updates the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version or version constraint
-according to the underlying package system syntax."
-  (fpm update package-name))
-
-
-(define-option ("remove" "-R" "--remove" "uninstall" "--uninstall") (package-name)
-  "Uninstalls the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version or version constraint
-according to the underlying package system syntax.
-"
-  (fpm remove package-name))
-
-
-(define-option ("show-info" "info" "-i" "--show-info" "--info") (package-name)
-  ;; [show] info <package-name>
-  "Displays information about the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version or version constraint
-according to the underlying package system syntax.
-This package may be installed or not.
-"
-  (fpm info package-name))
-
-
-(define-option  ("list-packages" "-p" "--list-packages" "list-package"
-                                 "list" "packages" "package")
-    (&rest qualifier-and-package-pattern)
-  ;; [list] [installed|available|all|not-installed|required] packages [<package-pattern>]
-  "Lists the packages and versions matching the PACKAGE-PATTERN or
-all the packages if omited.   The keywords installed, available,
-all or not installed restrict the listing to the correponding
-package.  available and all are synonyms and the default."
-  (let ((valid-qualifiers  '(installed available all not-installed required)))
-    (when (null qualifier-and-package-pattern)
-      (error "Missing a PACKAGE-PATTERN"))
-    (let ((qualifier
-           (cond
-             ((member (first qualifier-and-package-pattern) valid-qualifiers
-                      :test (function string-equal))
-              (pop  qualifier-and-package-pattern))
-             ((< 1 (length qualifier-and-package-pattern))
-              (error "Too many arguments: ~{~A~^ ~}" qualifier-and-package-pattern))
-             (t
-              'all)))
-          (package-pattern (first qualifier-and-package-pattern)))
-      (fpm list-packages
-           (intern (string-upcase qualifier) "KEYWORD") t
-           :pattern package-pattern))))
-
-
-(define-option ("list-files" "files" "-l" "--list-files" "--files" "list-file" "file"
-                             "contents" "content") (package-name)
-  ;; [list] files [in] <package-name>
-  "Lists the full pathnames of the files in the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version or version constraint
-according to the underlying package system syntax.
-This package may be installed or not.
-"
-  (fpm list-files package-name))
-
-
-(define-option ("package-containing" "package" "-c" "--package-containing"
-                                     "who-owns" "owns" "owner") (file-path)
-  ;; package [containing] [file] <file-path>
-  "Lists the package(s) containing the file FILE-PATH.  If file path
-is not an absolute pathname, then it's taken as a pattern for the
-file paths."
-  (fpm find-package-containing-file file-path))
-
-
-
-(define-option ("search-package-info" "search-package" "search"
-                "-s"
-                "--search-package-info" "--search-package" "--search") (pattern)
-  ;; search [package] [info] <pattern>
-  "Lists the packages that have the <pattern> in their package information."
-  (fpm find-package-with-info pattern))
-
-
-
-(define-option ("show-dependencies" "dependencies" "-d" "--show-dependencies" "--dependencies") (package-name)
-;; [show] dependencies [of] [package] <package-name>
-  "List the packages on which the package named PACKAGE-NAME depends.
-PACKAGE-NAME may include some specific version according to the
-underlying package system syntax.
-[installed|newest]
-"
-  (fpm dependencies package-name))
-
-
-
-(define-option ("who-depends-on" "depends" "--who-depends-on" "--who-depends" "--depends") (package-name)
-  ;; [who] depends [on] [package] <package-name>
-  "List the packages who depend on the package named PACKAGE-NAME.
-PACKAGE-NAME may include some specific version according to the
-underlying package system syntax.
-"
-  (fpm dependants package-name))
-
-
-
 
 ;;  "
 ;;
@@ -949,7 +952,7 @@ underlying package system syntax.
              (make-instance pms))
             (t
              (make-instance 'unimplemented-pms :package-management-system pms)))))
-  (parse-options arguments)
+  (parse-options *command* arguments)
   (error "Not implemented yet.")
   ex-usage)
 

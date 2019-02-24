@@ -30,12 +30,12 @@
 ;;; generate the program
 ;;;
 
-
 (defparameter *all-commands*
   '("add-cookie" "add-paths" "ansi-test" "batch-emerge"
     "bin-to-c-array" "buzzword" "capitalize"
     "cddb-to-tag" "check-surface" "clar"
     "clean-bd-archive" "clean-name" "clean-paths"
+    "commands"
     "columnify" "cookie-diff" "cookie-loop"
     "cookie-merge" "cookie" "dedup"
     "departement" "diss" "downcase"
@@ -62,25 +62,31 @@
 
 ;;; Scan command sources for command :use-systems forms.
 
-(let ((*default-pathname-defaults* (merge-pathnames #P"./commands/.lisp" cl-user::*source-directory*)))
-  (dolist (name *all-commands*)
-    (register-command-file name (merge-pathnames name *default-pathname-defaults* nil))))
+(defun register-comamnds ()
+  (let ((*default-pathname-defaults* (merge-pathnames (make-pathname :directory '(:relative "commands")
+                                                                     :name nil
+                                                                     :type "lisp"
+                                                                     :version nil)
+                                                      cl-user::*source-directory*)))
+    (dolist (name *all-commands*)
+      (register-command-file name (merge-pathnames name *default-pathname-defaults* nil)))))
 
 ;;; Quickload used systems:
 
-(ql:quickload (delete-duplicates
-               (mapcan (lambda (name) (copy-list (command-use-systems (command-named name))))
-                       *all-commands*)))
+(defun quickload-command-dependencies ()
+  (ql:quickload (delete-duplicates
+                 (mapcan (lambda (name) (copy-list (command-use-systems (command-named name))))
+                         *all-commands*))))
 
 ;;; Compile and load all commands:
 
 (defparameter *failures* 0)
 
-(dolist (name *all-commands*)
-  (format t "~&;Processing ~A~%" name) (finish-output)
+(defun compile-and-load-command (name)
   (handler-case
       (let* ((package (command-package name))
              (command (command-named name)))
+        (format t "~&;Processing ~A in package ~A~%" name  (package-name package)) (finish-output)
         (multiple-value-bind (fasl warnings-p failure-p)
             (let ((*program-name* name)
                   (*package* package))
@@ -97,23 +103,33 @@
                     (format t "~&;Failed to load ~S~%" (command-pathname command))
                     (incf *failures*))))))
     (error (err)
-      (format t "~&~A~%" err) (finish-output))))
+      (format *error-output* "~&~A~%" err) (finish-output *error-output*))))
 
 ;;; Generate link script:
 
- (with-open-file (*standard-output*
-                  (merge-pathnames (make-pathname :name "symlink-commands" :type :unspecific :version :unspecific
-                                                  :defaults cl-user::*release-directory*)
-                                   cl-user::*release-directory*
-                                   nil)
-                  :direction :output
-                  :if-does-not-exist :create
-                  :if-exists :supersede)
-   (write-line "#!/bin/bash")
-   (dolist (name *all-commands*)
-     (format t "ln -s commands ~A~%" name)))
+(defun generate-link-script ()
+  (with-open-file (*standard-output*
+                   (merge-pathnames (make-pathname :name "symlink-commands" :type :unspecific :version :unspecific
+                                                   :defaults cl-user::*release-directory*)
+                                    cl-user::*release-directory*
+                                    nil)
+                   :direction :output
+                   :if-does-not-exist :create
+                   :if-exists :supersede)
+    (write-line "#!/bin/bash")
+    (dolist (name *all-commands*)
+      (format t "ln -s commands ~A~%" name))))
+
 
 ;;; Save the lisp image
+
+(progn
+  (register-comamnds)
+  (quickload-command-dependencies)
+  (generate-link-script)
+  (setf *failures* 0)
+  (dolist (name *all-commands*)
+    (compile-and-load-command name)))
 
 #-testing
 (unless (zerop *failures*)
@@ -121,11 +137,12 @@
   (finish-output)
   (script:exit 1))
 
+#-testing
 (cl-user::generate-program :program-name "commands"
-                           :main-function "COM.INFORMATIMAGO.COMMAND.UTILITY:DISPATCH-COMMAND"
+                           :main-function "COM.INFORMATIMAGO.COMMAND.SCRIPT:DISPATCH-COMMAND"
                            :system-name nil
                            :system-list '()
-                           :init-file "~/.command.lisp"
+                           :init-file "~/.commands.lisp"
                            :version "1.0.0"
                            :copyright (format nil "Copyright Pascal J. Bourguignon 2019 - 2019~%License: AGPL3")
                            :source-directory  cl-user::*source-directory*

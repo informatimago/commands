@@ -1,12 +1,12 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
-(command :use-systems (:com.informatimago.common-lisp.cesarum)
+(command :use-systems (:com.informatimago.common-lisp.cesarum
+                       :com.informatimago.common-lisp.html-generator)
          :use-packages ("COMMON-LISP"
                         "SCRIPT"
                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY"
                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST"
-                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
-                        "COM.INFORMATIMAGO.COMMON-LISP.HTML-GENERATOR.HTML"))
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"))
 
 ;;------------------------------------------------------------------------
 
