@@ -357,16 +357,19 @@ Signals an error if they exit with an error status or are killed by a signal."
    (apply (function run) (format nil "~A~~@{ ~~A~~}" command) arguments)))
 
 
-(defun e (&rest args)
+(defun e (command &rest args)
+  #-ccl (error "Not implemented yet on ~S" (lisp-implementation-type))
+  #+ccl
   (with-output-to-string (out)
-    (with-open-stream (in (uiop:run-program (format nil "~{~A ~}" args)
-                                            :force-shell t
-                                            :output :stream
-                                            :wait nil))
+    (with-open-stream (in (ccl:external-process-output-stream
+                           (ccl:run-program command args
+                                            :wait nil
+                                            :input nil
+                                            :output :stream)))
       (loop
         :for line = (read-line in nil nil)
+        :do (write-line line)
         :while line :do (write-line line out)))))
-
 
 ;;;------------------------------------------------------------
 (eval-when (:compile-toplevel :load-toplevel :execute)
