@@ -118,7 +118,8 @@
                    :if-exists :supersede)
     (write-line "#!/bin/bash")
     (dolist (name *all-commands*)
-      (format t "ln -s commands ~A~%" name))))
+      (unless (string= name "commands")
+        (format t "ln -s commands ~A~%" name)))))
 
 
 ;;; Save the lisp image
