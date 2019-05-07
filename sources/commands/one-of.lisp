@@ -132,10 +132,11 @@ remaining arguments, then they're all printed in random order.
   (unless *items*
     (setf *items*
           (mapcar (function namestring)
-                  (remove-if      ; remove backup files and dot-files.
+                  (remove-if      ;; remove backup files and dot-files.
                              (lambda (path)
                                (let ((name (file-namestring path)))
-                                 (or (char= #\. (aref name 0))
+                                 (or (zerop (length name))
+                                     (char= #\. (aref name 0))
                                      (char= #\~ (aref name (1- (length name))))
                                      (and (char= #\# (aref name 0))
                                           (char= #\# (aref name (1- (length name))))))))
