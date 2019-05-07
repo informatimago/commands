@@ -62,7 +62,7 @@
 
 ;;; Scan command sources for command :use-systems forms.
 
-(defun register-comamnds ()
+(defun register-commands ()
   (let ((*default-pathname-defaults* (merge-pathnames (make-pathname :directory '(:relative "commands")
                                                                      :name nil
                                                                      :type "lisp"
@@ -124,7 +124,7 @@
 ;;; Save the lisp image
 
 (progn
-  (register-comamnds)
+  (register-commands)
   (quickload-command-dependencies)
   (generate-link-script)
   (setf *failures* 0)
