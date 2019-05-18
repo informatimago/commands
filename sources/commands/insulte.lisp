@@ -76,6 +76,8 @@
     ("escogriffe" (nm))
     ("espèce de" (|...|))
     ("extrait de" (|...|))
+    ("graine de" (|...|))
+    ("tersorium" (nm))
     ("faux jeton" (nm))
     ("flibustier" (nm))
     ("forban" (nm))
