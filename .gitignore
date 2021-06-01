@@ -1,2 +1,8 @@
+*~
+*\!*.asd
+*.fasl
+*.sse2f
+*.o
+*.bak
 *.lx64fsl
 *.dx64fsl

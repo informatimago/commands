@@ -1,20 +1,12 @@
 
+
+
 (defpackage "COM.INFORMATIMAGO.COMMAND.SCRIPT"
   (:nicknames "SCRIPT")
   (:use "COMMON-LISP"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.VERSION")
-
-  (:export                              ; Exit codes:
-   "EX--BASE" "EX--MAX" "EX-CANTCREAT" "EX-CONFIG"
-   "EX-DATAERR" "EX-IOERR" "EX-NOHOST" "EX-NOINPUT"
-   "EX-NOPERM" "EX-NOUSER" "EX-OK" "EX-OSERR" "EX-OSFILE"
-   "EX-PROTOCOL" "EX-SOFTWARE" "EX-TEMPFAIL" "EX-UNAVAILABLE"
-   "EX-USAGE"
-
-   "EXIT")
-
   (:export
    "*VERBOSE*" "*DEBUG*"
    "*DEFAULT-PROGRAM-NAME*" "*PROGRAM-NAME*" "*PROGRAM-PATH*" "*ARGUMENTS*"
@@ -24,8 +16,16 @@
    "REDIRECTING-STDOUT-TO-STDERR"
    "RELAUNCH-WITH-KFULL-LINKSET-IF-NEEDED"
 
-   ;; I/O
+                                        ; I/O
    "PERROR" "PMESSAGE" "PQUERY")
+
+  (:export                              ; Exit codes:
+   "EX--BASE" "EX--MAX" "EX-CANTCREAT" "EX-CONFIG"
+   "EX-DATAERR" "EX-IOERR" "EX-NOHOST" "EX-NOINPUT"
+   "EX-NOPERM" "EX-NOUSER" "EX-OK" "EX-OSERR" "EX-OSFILE"
+   "EX-PROTOCOL" "EX-SOFTWARE" "EX-TEMPFAIL" "EX-UNAVAILABLE"
+   "EX-USAGE"
+   "EXIT")
 
   (:export                              ; Commands
    "*COMMAND*"
@@ -44,14 +44,25 @@
    "CALL-OPTION-FUNCTION" "PARSE-OPTIONS"
    "HELP-OPTION" "BASH-COMPLETION-OPTIONS")
 
-  (:export
-   ;; Utilities:
+  (:export                              ; Utilities:
    "FIND-DIRECTORIES"
    "CONCAT"
    "GETENV" "GETPID" "GETUID"
    "SHELL-QUOTE-ARGUMENT" "SHELL" "EXECUTE" "RUN-PROGRAM"
    "UNAME" "CP"  "MAKE-SYMBOLIC-LINK" "MAKE-DIRECTORY"))
 
+
+
+(defpackage "COM.INFORMATIMAGO.COMMAND"
+  (:use "COMMON-LISP"
+        "COM.INFORMATIMAGO.COMMAND.SCRIPT")
+  (:export "*ALL-COMMANDS*"))
+
+
+
 (defpackage "COM.INFORMATIMAGO.COMMAND.GENERATE"
   (:use "COMMON-LISP"
-        "COM.INFORMATIMAGO.COMMAND.SCRIPT"))
+        "COM.INFORMATIMAGO.COMMAND.SCRIPT"
+        "COM.INFORMATIMAGO.COMMAND"))
+
+

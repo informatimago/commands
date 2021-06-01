@@ -527,8 +527,12 @@ RETURN: A string containing the response line.
    (use-packages         :initarg  :use-packages  :initform '()    :accessor command-use-packages)
    (main                 :initarg  :main          :initform nil)))
 
-(defun command-package-name (command-name)
-  (format nil "COMMAND.~:@(~A~)" command-name))
+(defgeneric command-package-name (command)
+  (:method ((command-name string))
+    (format nil "COMMAND.~:@(~A~)" command-name))
+  (:method ((command command))
+    (command-package-name (command-name command))))
+
 
 (defgeneric command-main (command)
   (:method ((command command))
@@ -665,12 +669,11 @@ SEE: COMMAND-PACKAGE-NAME")
   (let* ((name    (pathname-name pname))
          (command (command-named name)))
     (if command
-        (progn
-          (setf com.informatimago.command.script:*command*              command
-                com.informatimago.command.script:*program-name*         name
-                com.informatimago.command.script:*default-program-name* name
-                com.informatimago.command.script:*program-path*         pname
-                com.informatimago.command.script:*arguments*            arguments)
+        (let ((com.informatimago.command.script:*command*              command)
+              (com.informatimago.command.script:*program-name*         name)
+              (com.informatimago.command.script:*default-program-name* name)
+              (com.informatimago.command.script:*program-path*         pname)
+              (com.informatimago.command.script:*arguments*            arguments))
           (com.informatimago.command.script:exit
            (handler-case
                (funcall (read-from-string (command-main command)) arguments)

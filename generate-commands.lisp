@@ -90,7 +90,8 @@
         (multiple-value-bind (fasl warnings-p failure-p)
             (let ((*program-name* name)
                   (*package* package))
-              (compile-file (command-pathname command) :verbose t))
+              (with-compilation-unit (:override t)
+                (compile-file (command-pathname command) :verbose t)))
           (if (or warnings-p failure-p)
               (progn
                 (format t "~&;Failed to compile ~S~%" (command-pathname command))
@@ -145,7 +146,8 @@
                            :system-list '()
                            :init-file "~/.commands.lisp"
                            :version "1.0.0"
-                           :copyright (format nil "Copyright Pascal J. Bourguignon 2019 - 2019~%License: AGPL3")
+                           :copyright #.(format nil "Copyright Pascal J. Bourguignon 2019 - ~A~%License: AGPL3"
+                                              (nth-value 5 (decode-universal-time (get-universal-time))))
                            :source-directory  cl-user::*source-directory*
                            :asdf-directories  cl-user::*asdf-directories*
                            :release-directory cl-user::*release-directory*)
