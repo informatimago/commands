@@ -739,6 +739,10 @@ SEE: COMMAND-PACKAGE-NAME")
                               rest
                               (nreverse keys)))))
 
+(defun keywordize (string-designator)
+  (intern (string string-designator)
+          (load-time-value (find-package "KEYWORD"))))
+
 (defun q&d-arguments (mandatories optionals rest keys)
   "
 BUG: when the optionals or keys have a present indicator,

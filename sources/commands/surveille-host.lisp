@@ -37,10 +37,12 @@
 ;;;;*****************************************************************************
 
 (command :use-systems (:com.informatimago.common-lisp)
-         :use-packages ("COMMON-LISP" "SCRIPT"
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.ACTIVITY"))
 
+(in-package "COMMAND.SURVEILLE-HOST")
 
 (defparameter *from-email* "surveille-host <pjb@informatimago.com>")
 
@@ -168,7 +170,8 @@ DO:    If there is already a remote with the same IP-ADDRESS
                                :period (check-period remote)
                                :active t
                                :closure (lambda () (check remote))))
-      (schedule (activity remote)))))
+      (schedule-activity (activity-scheduler (activity remote))
+                         (activity remote)))))
 
 (defun main (argv)
   (declare (ignore argv))
@@ -183,7 +186,7 @@ DO:    If there is already a remote with the same IP-ADDRESS
     (maphash (lambda (key remote)
                (declare (ignore key))
                (setf (check-period remote) period)
-               (setf (period (activity remote)) period))
+               (setf (activity-period (activity remote)) period))
              *remotes*))
   (activity-run)
   ex-ok)

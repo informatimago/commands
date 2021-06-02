@@ -1,39 +1,15 @@
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 
+(command :use-systems (:com.informatimago.common-lisp.cesarum
+                       :split-sequence)
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "SPLIT-SEQUENCE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST"))
 
-(defun stream-to-string-list (stream)
-  "
-RETURN:  the list of lines collected from stream.
-"
-  (typecase stream
-    (stream    (loop
-                  :for line = (read-line stream nil nil)
-                  :while line :collect line))
-    (string    (split-string stream (format nil "~C" #\newline)))
-    (otherwise nil)))
-
-(defun string-list-text-file-contents (path &key (if-does-not-exist :error)
-                                      (external-format :default))
-  "
-RETURN:  the list of lines collected from the file.
-"
-  (with-open-file (in path :direction :input
-                      :if-does-not-exist if-does-not-exist
-                      :external-format external-format)
-    (stream-to-string-list  in)))
-
-(defun split-list (separator list &key (test (function eql)))
-  (loop
-    :with result = '()
-    :with subseq = '()
-    :for item :in list
-    :do (if (funcall test separator item)
-            (progn
-              (push (nreverse subseq) result)
-              (setf subseq '()))
-            (push item subseq))
-    :finally (push (nreverse subseq) result)
-             (return (nreverse result))))
+(in-package "COMMAND.COOKIE-MERGE")
 
 (defun key (cookie)
   (map 'vector (function sxhash) cookie))
@@ -42,9 +18,9 @@ RETURN:  the list of lines collected from the file.
   (let ((c (make-hash-table :test (function equalp))))
     (dolist (cookie
              (delete nil
-                     (split-list "%"
-                                 (string-list-text-file-contents pathname)
-                                 :test (function string=)))
+                     (split-sequence "%"
+                                     (string-list-text-file-contents pathname)
+                                     :test (function string=)))
              c)
       (if (and (gethash (key cookie) c)
                (not (equalp (gethash (key cookie) c) cookie)))

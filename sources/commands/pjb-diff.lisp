@@ -4,6 +4,11 @@
 ;;;; reports line movements in addition to line additions/suppressions.
 ;;;;
 
+(command :use-systems (:md5)
+         :use-packages ("COMMON-LISP" "SCRIPT" "MD5"))
+
+(in-package "COMMAND.PJB-DIFF")
+
 
 (defstruct options
   (remove-spaces t)

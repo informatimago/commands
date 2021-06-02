@@ -8,7 +8,7 @@
 
 #|
 (in-package "COMMON-LISP-USER")
-(load (make-pathname :name "SCRIPT" :type "LISP" :version NIL :case :common :defaults *load-pathname*))
+(load (make-pathname :name "script" :type "lisp" :version NIL :case :local :defaults *load-pathname*))
 (use-package "SCRIPT")
 (defparameter *program-version* "1.0.2")
 

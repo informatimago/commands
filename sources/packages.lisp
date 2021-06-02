@@ -1,6 +1,4 @@
 
-
-
 (defpackage "COM.INFORMATIMAGO.COMMAND.SCRIPT"
   (:nicknames "SCRIPT")
   (:use "COMMON-LISP"

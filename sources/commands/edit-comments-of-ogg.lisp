@@ -250,12 +250,12 @@ RETURN:  a cons with two substrings of string such as:
   (setf last-copyright        copyright))
 
 (defun title (file)
-  (when (string= ".ogg" (subseq file (- (length file) 4) (length file)))
-    (setf file (subseq file 0 (- (length file) 4))))
-  (loop for i from 0 to (1- (length file))
-     when (member (aref file i) '( #\- #\_ ) :test 'eq)
-     do   (aset file i 32))
-  file)
+  (nsubstitute-if
+   #\space
+   (lambda (ch) (or (char= ch #\_) (char= ch #\-)))
+   (if (string= ".ogg" (subseq file (- (length file) 4) (length file)))
+       (subseq file 0 (- (length file) 4))
+       (copy-seq file))))
 
 (defun edit (files)
   (let ((index 0)

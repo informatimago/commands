@@ -1,31 +1,12 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
-(defun copy-stream (from to)
-  "Copy into TO from FROM until end of the input file.  Do not
-translate or otherwise maul anything.
-AUTHORS: Daniel Barlow, Xarch"
-  (let ((buf (make-array 4096 :element-type (stream-element-type from))))
-    (do ((pos (read-sequence buf from) (read-sequence buf from)))
-        ((= 0 pos) nil)
-      (write-sequence buf to :end pos))))
+(command :use-systems (:com.informatimago.common-lisp.cesarum)
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"))
 
-#-(and) (defun copy-file (src dst &key (if-exists :error) (external-format :default)
-                                    (element-type 'character))
-          "
-DO:     Copy the contents of the file at path SRC to the file at path DST.
-"
-          (with-open-file (inp src
-                               :direction :input
-                               :if-does-not-exist :error
-                               :external-format external-format
-                               :element-type element-type)
-            (with-open-file (out dst
-                                 :direction :output
-                                 :if-does-not-exist :create
-                                 :if-exists if-exists
-                                 :external-format external-format
-                                 :element-type element-type)
-              (copy-stream inp out))))
+(in-package "COMMAND.LC")
 
 (defun process-file (encoding file)
   (let* ((file (truename file))

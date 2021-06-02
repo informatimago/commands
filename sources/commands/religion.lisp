@@ -16,12 +16,13 @@
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
+;;;;    2021-06-02 <PJB> Corrected generation of function names in define-enumeration.
 ;;;;    2010-11-05 <PJB> Converted to Common Lisp from bash.
 ;;;;    2002-03-22 <PJB> Creation.
 ;;;;BUGS
 ;;;;    Please report them to the author.
 ;;;;LEGAL
-;;;;    Copyright Pascal J. Bourguignon 2002 - 2010
+;;;;    Copyright Pascal J. Bourguignon 2002 - 2021
 ;;;;
 ;;;;    This program is free software; you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
@@ -37,6 +38,8 @@
 ;;;;    along with this program; if not, write to the Free Software
 ;;;;    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ;;;;******************************************************************************
+
+(in-package "COMMAND.RELIGION")
 
 (defvar *religion-pathname*)
 ;; Could be a common file such as /usr/local/share/lib/religions or whatever..
@@ -55,7 +58,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-predicate-name (name)
-    (intern (format nil "~A~:[~;-~]P" name  (find #\- (string name))))))
+    (intern (format nil "~A~:[~;-~]P" (string name)  (find #\- (string name))))))
 
 
 (defmacro define-digit-type (name (&key (min 0) (max 9) (allow-unknown t) documentation))
@@ -648,7 +651,7 @@ while the explainations are written to stdout."
                                  "Prints the version of this script."
                                  (format t "~A copyright and license:~%" *program-name*)
                                  (format t "
-    Copyright Pascal J. Bourguignon 2002 - 2010
+    Copyright Pascal J. Bourguignon 2002 - 2021
 
     mailto:pjb@informatimago.com
 
@@ -671,7 +674,7 @@ while the explainations are written to stdout."
                          (bash-completion-options)))
 
 (defun main (arguments)
-  (setf *religion-pathname* (make-pathname :name "RELIGIONS" :type "DATA" :version NIL :case :common
+  (setf *religion-pathname* (make-pathname :name "religions" :type "data" :version NIL :case :local
                                            :defaults (user-homedir-pathname))
         *religion-db* (load-religion-database *religion-pathname*)
         *debug* t
