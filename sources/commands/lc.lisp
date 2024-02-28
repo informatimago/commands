@@ -25,7 +25,9 @@
     ex-ok))
 
 (defun process-stream (encoding input output)
-  (setf (stream-external-format output) encoding)
+  (declare (ignorable encoding))
+  #+ccl (setf (stream-external-format output) encoding)
+  #-ccl (warn "Use flexi-strems to change the external-format / encoding?")
   (handler-case (copy-stream input output)
       (error (err)
         (format *error-output*

@@ -54,6 +54,7 @@
 ;;;;    Software Foundation, Inc., 59 Temple Place, Suite 330,
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
+(in-package "SCRIPT")
 
 (command :use-systems (:md5 :usocket))
 
@@ -85,7 +86,7 @@ DO:         A CASE, but for string keys. That is, it uses STRING= as test
           (coerce
            (md5:md5sum-sequence
             (coerce
-             (map 'vector (function char-code)
+             (map '(vector (unsigned-byte 8)) (function char-code)
                   (concatenate 'string stamp password))
              '(SIMPLE-ARRAY (UNSIGNED-BYTE 8))))
            'list)))

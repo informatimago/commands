@@ -1,15 +1,13 @@
 ;; -*- mode:lisp;coding:utf-8 -*-
+(in-package "SCRIPT")
 
 (command :use-systems (:com.informatimago.common-lisp.cesarum)
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
          :main "COM.INFORMATIMAGO.COMMAND.DEDUP:MAIN")
 
-(defpackage "COM.INFORMATIMAGO.COMMAND.DEDUP"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STREAM"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
-  (:export "MAIN"))
-(in-package "COM.INFORMATIMAGO.COMMAND.DEDUP")
 
 (defun main (arguments)
   (declare (ignore arguments))

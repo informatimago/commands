@@ -1,5 +1,9 @@
 ;;;; -*- mode:lisp; coding:utf-8 -*-
 
+(command :documentation "Delete duplicate files.")
+
+(defvar *base* nil)
+
 (defun main (arguments)
   (when (null arguments)
     (error "Usage: ~A directory~%" *program-name*))

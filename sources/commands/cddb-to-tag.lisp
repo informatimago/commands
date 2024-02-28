@@ -38,20 +38,18 @@
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
+(in-package "SCRIPT")
 
 (command :use-systems (:uiop :split-sequence :cl-ppcre
                              :com.informatimago.common-lisp.cesarum)
-         :main "COM.INFORMATIMAGO.COMMAND.CDDB-TO-TAG:MAIN")
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "SPLIT-SEQUENCE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE")
+         :main "COMMAND.CDDB-TO-TAG:MAIN")
 
-
-(defpackage "COM.INFORMATIMAGO.COMMAND.CDDB-TO-TAG"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "SPLIT-SEQUENCE"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE")
-  (:export "MAIN"))
-(in-package "COM.INFORMATIMAGO.COMMAND.CDDB-TO-TAG")
+(in-package "COMMAND.CDDB-TO-TAG")
 
 (defparameter *dry-run* nil)
 
@@ -236,38 +234,6 @@
 ;;     information on ISRC numbers. http://isrc.ifpi.org/
 
 
-(defun tag-flac-file (file disk tags)
-  (declare (ignore disk))
-  (funcall (if *dry-run*
-               (function print)
-               (function uiop:run-program))
-           (append (list "metaflac")
-                   (mapcan (lambda (tag)
-                             (let ((flac-tag (second (find (first tag) *tag-keys* :key (function first)))))
-                               (when flac-tag
-                                 (list
-                                  (format nil "--set-tag=~A=~A"
-                                          flac-tag
-                                          (second tag))))))
-                           tags)
-                   (list (namestring file)))))
-
-(defun tag-mp3-file  (file disk tags)
-  (funcall (if *dry-run*
-               (function print)
-               (function uiop:run-program))
-           (append (list "id3v2")
-                   (mapcan (lambda (tag)
-                             (let ((frame (third (find (first tag) *tag-keys* :key (function first)))))
-                               (when frame
-                                 (list (format nil "--~A" frame)
-                                       (if (eq :tracknumber (first tag))
-                                           (format nil "~A/~A" (second tag) (length (cddb-disk-tracks disk)))
-                                           (second tag))))))
-                           tags)
-                   (list  (namestring file)))))
-
-
 ;;;
 ;;; Cleaning up file names
 ;;;
@@ -355,6 +321,39 @@ RETURN: A string containing the character without accent
         ;; :copyright :license :organization
         ;; :description :genre :date :location :contact
         (list :isrc        (cddb-track-isrc track))))
+
+
+(defun tag-flac-file (file disk tags)
+  (declare (ignore disk))
+  (funcall (if *dry-run*
+               (function print)
+               (function uiop:run-program))
+           (append (list "metaflac")
+                   (mapcan (lambda (tag)
+                             (let ((flac-tag (second (find (first tag) *tag-keys* :key (function first)))))
+                               (when flac-tag
+                                 (list
+                                  (format nil "--set-tag=~A=~A"
+                                          flac-tag
+                                          (second tag))))))
+                           tags)
+                   (list (namestring file)))))
+
+(defun tag-mp3-file  (file disk tags)
+  (funcall (if *dry-run*
+               (function print)
+               (function uiop:run-program))
+           (append (list "id3v2")
+                   (mapcan (lambda (tag)
+                             (let ((frame (third (find (first tag) *tag-keys* :key (function first)))))
+                               (when frame
+                                 (list (format nil "--~A" frame)
+                                       (if (eq :tracknumber (first tag))
+                                           (format nil "~A/~A" (second tag) (length (cddb-disk-tracks disk)))
+                                           (second tag))))))
+                           tags)
+                   (list  (namestring file)))))
+
 
 ;;;
 ;;; Loading (read and parse) cddb.txt files.
@@ -578,8 +577,8 @@ RETURN: A string containing the character without accent
   (warn "Not implemented yet.")
   (print new))
 
-
-(defun rename-eric-satic-files ()
+#-(and)
+(defun rename-eric-satie-files ()
   (dolist (dir '("/movies/sound/flac/eric-satie/the-complete-solo-piano-music--thibaudet/"
                  "/movies/sound/flac/eric-satie/satie-piano-works--ciccolini--tacchino/"))
     (let ((index (com.informatimago.common-lisp.cesarum.file:sexp-file-contents

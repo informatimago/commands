@@ -5,11 +5,11 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Builder script for the commands executable.
 ;;;;    This scripts compiles and load all commands
 ;;;;    and their dependencies.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -17,28 +17,31 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    AGPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2021 - 2021
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU Affero General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU Affero General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
 (in-package "COM.INFORMATIMAGO.COMMAND.GENERATE")
+(defvar *verbose* t)
 
 ;;; --------------------------------------------------------------------
+(when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(ql:quickload :com.informatimago.common-lisp.cesarum)))
 (ql:quickload :com.informatimago.common-lisp.cesarum)
 
+(when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(cl:defpackage "COM.INFORMATIMAGO.COMMAND.GENERATE.E48")))
 (cl:defpackage "COM.INFORMATIMAGO.COMMAND.GENERATE.E48"
   (:use)
   (:export "ACK" "APC" "BEL" "BPH" "BS" "CAN" "CBT" "CCH" "CHA" "CHT"
@@ -192,11 +195,16 @@
 
 
 (progn
+  (when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(register-commands)))
   (register-commands)
+  (when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(quickload-command-dependencies)))
   (quickload-command-dependencies)
+  (when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(generate-link-script)))
   (generate-link-script)
+  (when *verbose* (format *trace-output* "builder.lisp: ~S~%" '(setf *failures* 0)))
   (setf *failures* 0)
   (dolist (name *all-commands*)
+    (when *verbose* (format *trace-output* "builder.lisp: ~S~%" `(compile-and-load-command ,name)))
     (compile-and-load-command name)))
 
 ;;;; THE END ;;;;

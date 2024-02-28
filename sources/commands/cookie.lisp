@@ -181,10 +181,12 @@
                                        *default-table-path*))
                                   *default-files*)))
                     (arrow (if (zerop total-size)
-                               (progn (error "~A: not a good cookie file! ~
+                               (handler-case (error "~A: not a good cookie file! ~
                                        (This is not a cookie).~%"
-                                             *program-name*)
-                                      (return-from main 1))
+                                                    *program-name*)
+                                 (error (err)
+                                   (format *error-output* "~&~A~%" err)
+                                   (return-from main 1)))
                                (random total-size))))
                (cookie-from-file (loop with total = 0
                                        for file in files

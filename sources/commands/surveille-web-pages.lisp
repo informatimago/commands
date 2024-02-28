@@ -50,7 +50,7 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;****************************************************************************
 
-
+(in-package "SCRIPT")
 (command :use-systems (:babel))
 
 (defun make-pipe-input-stream  (command &key (external-format :default)
@@ -66,7 +66,7 @@
 
 (defun ensure-list (item)  (if (listp item) item (list item)))
 
-(defconstant +code+
+(defparameter +code+
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
 (defconstant +pad+ 64)
 
@@ -176,6 +176,7 @@
               '(simple-array (unsigned-byte 8) (*)))))))
 
 (defun get-resource (resource)
+  ;; TODO: use drakma?
   (setf (resource-data resource)
         (ecase  (resource-kind resource)
           ((:page)
@@ -191,10 +192,10 @@
                                            (resource-uri resource))
                                    :element-type '(unsigned-byte 8)))
              (loop
-                :with buffer = (make-array 1 :adjustable t :fill-pointer 0)
+                :with buffer = (make-array 8 :adjustable t :fill-pointer 0)
                 :for byte = (read-byte in nil nil)
                 :while byte
-                :do (vector-push-extend byte buffer)
+                :do (vector-push-extend byte buffer (length buffer))
                 :finally (return buffer)))))))
 
 (defun send-notice (task changes)
@@ -207,9 +208,9 @@
            (multiple-value-bind (se mi ho da mo ye)
                (decode-universal-time (get-universal-time))
              (format nil "~A-~8,'0X-~4,'0D~2,'0D~2,'0D~2,'0D~2,'0D~2,'0D"
-                     (with-open-stream
+                     (with-input-from-string
                          (in (uiop:run-program "hostname -f"
-                                               :output :stream
+                                               :output :string
                                                :wait nil
                                                :force-shell t))
                        (read-line in))

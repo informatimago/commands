@@ -34,6 +34,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
+(command :documentation "Separate a merged file with conflict into the two unmerged originals.")
+
 (defparameter *program-version* "0.1.0")
 
 ;;;------------------------------------------------------------------------
@@ -149,26 +151,25 @@
 (defvar *left-path* nil)
 (defvar *right-path* nil)
 
-(command :options (list*
+(options "split-merge"
+         (option ("version" "-V" "--version") ()
+                 "Report the version of this script."
+                 (format t "~A ~A~%" *program-name* *program-version*))
 
-                   (option ("version" "-V" "--version") ()
-                     "Report the version of this script."
-                     (format t "~A ~A~%" *program-name* *program-version*))
+         (option ("verbose" "-v" "--verbose") ()
+                 "Report writes the underlying commands that are run."
+                 (setf *verbose* t))
 
-                   (option ("verbose" "-v" "--verbose") ()
-                     "Report writes the underlying commands that are run."
-                     (setf *verbose* t))
+         (option ("left" "-l" "--left") (path)
+                 "Specifies the path of the left output file."
+                 (setf *left-path* path))
 
-                   (option ("left" "-l" "--left") (path)
-                     "Specifies the path of the left output file."
-                     (setf *left-path* path))
+         (option ("right" "-l" "--right") (path)
+                 "Specifies the path of the right output file."
+                 (setf *right-path* path))
 
-                   (option ("right" "-l" "--right") (path)
-                     "Specifies the path of the right output file."
-                     (setf *right-path* path))
-
-                   (help-option)
-                   (bash-completion-options)))
+         (help-option)
+         (bash-completion-options))
 
 
 

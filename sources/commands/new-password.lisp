@@ -36,6 +36,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
+(command :documentation "Generates a new random password.")
+
 (defparameter *program-version* "1.0.1")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,41 +64,41 @@ in their passwords:
 
 (defparameter *options* (make-options))
 
-(command :options (list*
-                   (option ("-l" "--low-case") ()
-                     "Generate only low-case letters in the password."
-                     (setf (options-case *options*) :low-case))
+(options "new-password"
+         (option ("-l" "--low-case") ()
+                 "Generate only low-case letters in the password."
+                 (setf (options-case *options*) :low-case))
 
-                   (option ("-u" "--up-case") ()
-                     "Generate only up-case letters in the password."
-                     (setf (options-case *options*) :up-case))
+         (option ("-u" "--up-case") ()
+                 "Generate only up-case letters in the password."
+                 (setf (options-case *options*) :up-case))
 
-                   (option ("-m" "--mix-case") ()
-                     "Generate mix-case letters in the password (default)."
-                     (setf (options-case *options*) :mix-case))
+         (option ("-m" "--mix-case") ()
+                 "Generate mix-case letters in the password (default)."
+                 (setf (options-case *options*) :mix-case))
 
-                   (option ("+s" "--no-special") ()
-                     "Generate a password without any special character."
-                     (setf (options-no-special-p *options*) t))
+         (option ("+s" "--no-special") ()
+                 "Generate a password without any special character."
+                 (setf (options-no-special-p *options*) t))
 
-                   (option ("+d" "--no-digit") ()
-                     "Generate a password without any digit character."
-                     (setf (options-no-digit-p *options*) t))
+         (option ("+d" "--no-digit") ()
+                 "Generate a password without any digit character."
+                 (setf (options-no-digit-p *options*) t))
 
-                   (option ("-L" "--length") (length)
-                     "Specifies the password length."
-                     (let ((length (parse-integer length)))
-                       (check-type length (integer 1))
-                       (setf (options-length *options*) length)))
+         (option ("-L" "--length") (length)
+                 "Specifies the password length."
+                 (let ((length (parse-integer length)))
+                   (check-type length (integer 1))
+                   (setf (options-length *options*) length)))
 
-                   ;; (option ("-I" "--build-trigram-index")
-                   ;;   (thesaurus-pathname) "Analyses the thesaurus
-                   ;;   and save tri-gram statistics for readable
-                   ;;   password generation."  (build-trigram-index
-                   ;;   thesaurus-pathname *index-pathname*))
+         ;; (option ("-I" "--build-trigram-index")
+         ;;   (thesaurus-pathname) "Analyses the thesaurus
+         ;;   and save tri-gram statistics for readable
+         ;;   password generation."  (build-trigram-index
+         ;;   thesaurus-pathname *index-pathname*))
 
-                   (help-option)
-                   (bash-completion-options)))
+         (help-option)
+         (bash-completion-options))
 
 
 ;; (defparameter *probability-distribution*

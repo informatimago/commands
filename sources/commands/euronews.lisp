@@ -49,7 +49,7 @@
 (defvar played-last nil)
 (defvar menu-items  '())
 
-(defconstant +available-languages+ '(de fr en it es ru))
+(defparameter +available-languages+ '(de fr en it es ru))
 
 (defun language-to-euronews (lang)
   (cond
@@ -167,12 +167,14 @@
               (setf last-index (- 0 last-index))))
 
            (when (< 0 last-index)
-             (error "What player?")
+             (format *error-output* "~&Please update euronews with a new player!~%") ; TODO
              #-(and) (uiop:run-program (format nil "/local/apps/RealPlayer8/realplay '~A' &"
                                                (elt urls (1- last-index)))
                                        :force-shell t)
              (set-played (1- last-index) t)
-             (setf index (1+ (mod last-index length-urls))))
+             (setf index (1+ (mod last-index length-urls)))
+             (return-from main 1) ; TODO
+             )
            (setf last-index (abs last-index)))
   ex-ok)
 

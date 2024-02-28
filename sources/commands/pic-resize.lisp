@@ -37,8 +37,9 @@
 ;;;;    Suite 330, Boston, MA 02111-1307, USA.
 ;;;;******************************************************************************
 
+(command :documentation "This script is a driver for the GIMP scheme script resize.scm.")
 
-(defconstant +pname+ "resize")
+(defparameter *program-name* "resize")
 
 
 (defun print-usage ()
@@ -59,7 +60,7 @@
                    (parse-integer arg :junk-allowed t)
                  (if (= pos (length arg))
                      value
-                     (progn (format t "~A: Invalid number: ~S.~%" +pname+ arg)
+                     (progn (format t "~A: Invalid number: ~S.~%" *program-name* arg)
                             (setq abort t)
                             nil))))
              (process-argument
@@ -73,7 +74,7 @@
                   (if (open arg :direction :probe :if-does-not-exist nil)
                       (push arg pic-files)
                       (progn
-                        (format t "~A: There is no file ~S.~%" +pname+ arg)
+                        (format t "~A: There is no file ~S.~%" *program-name* arg)
                         (setq abort t)))))))
       (dolist (arg arguments)
         (cond
@@ -86,12 +87,12 @@
            (if files
                (process-argument arg)
                (progn
-                 (format t "~A: Invalid option ~S.~%" +pname+ arg)
+                 (format t "~A: Invalid option ~S.~%" *program-name* arg)
                  (print-usage)
                  (exit 1))))
           (t (process-argument arg))))
       (unless pic-files
-        (format t "~A: Missing arguments.~%" +pname+)
+        (format t "~A: Missing arguments.~%" *program-name*)
         (print-usage)
         (exit ex-usage))
       (when abort

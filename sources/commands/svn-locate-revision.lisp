@@ -31,18 +31,14 @@
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
+(in-package "SCRIPT")
 
 (command :use-systems (:xmls :com.informatimago.common-lisp.cesarum)
+         :use-packages ( "COMMON-LISP"
+                         "SCRIPT"
+                         "XMLS"
+                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING")
          :main "SVN-LOCATE-REVISION:MAIN")
-
-
-(defpackage "SVN-LOCATE-REVISION"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "XMLS"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING")
-  (:export "MAIN"))
-(in-package "SVN-LOCATE-REVISION")
 
 (defparameter *verbose* t)
 

@@ -35,8 +35,13 @@
 ;;;;    59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ;;;;****************************************************************************
 
+(in-package "SCRIPT")
+
 (command :use-systems (:com.informatimago.clmisc)
-         :use-packages ("COMMON-LISP" "SCRIPT" "COM.INFORMATIMAGO.CLMISC.RESOURCE-UTILIZATION"))
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY"
+                        "COM.INFORMATIMAGO.CLMISC.RESOURCE-UTILIZATION"))
 
 (defun usage ()
   (format
@@ -150,15 +155,22 @@ RETURN: number of sectors per disk;
   (multiple-value-bind (block-size end)
       (parse-integer string :junk-allowed t :radix 10.)
     (* block-size
-       (block factor
-         (if (< end (length string))
-             (when (<= (length string) (1+ end))
-               (let ((factor (position (aref string end) "KMGTPEZY"
-                                       :test (function char-equal))))
-                 (when factor
-                   (return-from factor (expt 1024 (1+ factor))))
+       (if (<= (1+ end) (length string))
+           (let ((factor (position (aref string end) " KMGTPEZY"
+                                   :test (function char-equal))))
+             (if factor
+                 (expt 1024 factor)
                  (error "Invalid block factor: ~A" (subseq string end))))
-             (return-from factor 1))))))
+           1))))
+
+(progn
+  (assert (= 42 (parse-block-size "42")))
+  (assert (= 42 (parse-block-size "42 ")))
+  (assert (= 42 (parse-block-size "42 *")))
+  (assert (= (* 42 1024) (parse-block-size "42k")))
+  (assert (= (* 42 1024) (parse-block-size "42k*")))
+  (assert (= (* 42 1024 1024) (parse-block-size "42M")))
+  (assert (= (* 42 1024 1024) (parse-block-size "42M*"))))
 
 
 (defparameter *element-type*    '(unsigned-byte 8))

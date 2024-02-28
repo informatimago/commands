@@ -83,23 +83,34 @@ ALL_PROGRAMS=   \
 # all:$(ALL_PROGRAMS)
 all:commands
 
-CLISP=clisp
-CCL=ccl
-ECL=ecl
-SBCL=sbcl
+EXECUTABLE = bin/commands-$(shell uname -m)
+
+CLISP = clisp
+CLISP_OPTIONS =
+CCL   = ccl
+CCL_OPTIONS = --no-init
+ECL  = ecl
+ECL_OPTIONS =
+SBCL = sbcl
+SBCL_OPTIONS = --noinform --no-userinit --non-interactive
+LISP=$(SBCL)
+LISP_OPTIONS=$(SBCL_OPTIONS)
 CC=cc
 LINE="//----------------------------------------------------------------------"
 HERE=$(shell pwd)
 
+
 .PHONY: all clean test commands
 
-commands:bin/commands
+commands:$(EXECUTABLE)
 
-bin/commands bin/symlink-commands:generate-commands.lisp generate.lisp Makefile sources/*.lisp sources/commands/*.lisp
+$(EXECUTABLE) bin/symlink-commands:generate-commands.lisp generate.lisp Makefile sources/*.lisp sources/commands/*.lisp
 	@printf "// Generating Executable from %s source: %s\n" "Lisp" $@
-	-@rm -rf ~/.cache/common-lisp/ccl-*$(HERE)
-	@$(CCL) -n -l generate-commands.lisp # > commands-lisp-ccl.log 2>&1
-	mv commands symlink-commands bin/
+	@printf "// Using %s\n" "$(LISP)"
+	-rm -rf ~/.cache/common-lisp/$(LISP)-*$(HERE)
+	$(LISP) $(LISP_OPTIONS) --load generate-commands.lisp # > commands-lisp-ccl.log 2>&1
+	@mv -v commands         $(EXECUTABLE)
+	@mv -v symlink-commands bin/
 	chmod 755 bin/symlink-commands
 
 clean:
@@ -107,6 +118,6 @@ clean:
 	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.[dl]x64fsl \) -exec rm {} +
 #	-rm -f $(ALL_PROGRAMS)
 
-install:bin/commands bin/symlink-commands
-	install -m 755 bin/commands         ~/bin/
+install:$(EXECUTABLE) bin/symlink-commands
+	install -m 755 $(EXECUTABLE)        ~/bin/commands
 	install -m 755 bin/symlink-commands ~/bin/

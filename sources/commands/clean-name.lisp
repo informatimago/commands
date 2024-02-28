@@ -124,8 +124,6 @@ RETURN: A string containing the character without accent
 (defun process-name (name)
   (write-line (clean-name (translate-diacritics name))))
 
-
-
 (defun process-item (path)
   (let* ((components  (split-string "/" path :remove-empty-subseqs t))
          (new-path    (format nil "~{~A~^/~}"

@@ -1,8 +1,12 @@
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 
+(in-package "SCRIPT")
+
 (command :use-systems (:split-sequence :cl-ppcre)
-         :use-packages ("COMMON-LISP" "SCRIPT" "SPLIT-SEQUENCE"
-                                      "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"))
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "SPLIT-SEQUENCE"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.FILE"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

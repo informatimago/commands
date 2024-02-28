@@ -16,7 +16,20 @@
                ((#:albert #:docbook #:template)  . "book")
                ((#:albert #:docbook #:bgcolor)   . "white")
                ((#:albert #:docbook #:textcolor) . "black"))
-  :depends-on ("com.informatimago.common-lisp.cesarum")
+  :depends-on ("com.informatimago.common-lisp.cesarum"
+               ;; commands dependencies:
+               "split-sequence"
+               "babel"
+               "cffi"
+               "cl-ppcre"
+               "com.informatimago.clmisc"
+               "com.informatimago.common-lisp"
+               "com.informatimago.common-lisp.cesarum"
+               "md5"
+               "split-sequence"
+               "uiop"
+               "usocket"
+               "xmls")
   :components ((:file "packages" :depends-on ())
                (:file "script"   :depends-on ("packages")))
   #+asdf-unicode :encoding #+asdf-unicode :utf-8)

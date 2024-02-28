@@ -5,9 +5,8 @@
 ;;;;
 
 (command :use-systems (:md5)
-         :use-packages ("COMMON-LISP" "SCRIPT" "MD5"))
-
-(in-package "COMMAND.PJB-DIFF")
+         :use-packages ("COMMON-LISP" "SCRIPT" "MD5")
+         :shadow ("OPTIONS"))
 
 
 (defstruct options

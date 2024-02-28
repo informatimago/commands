@@ -37,13 +37,18 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; TODO: check how we define command packages again?
-  (import '(ccl:external-process-output-stream
-            ccl:external-process-error-stream
-            ccl:external-process-status)))
+(in-package "SCRIPT")
 
+(command :use-systems (:cl-ppcre :split-sequence)
+         :use-packages ("COMMON-LISP" "SCRIPT" "SPLIT-SEQUENCE")
+         :shadow ("RUN-PROGRAM"))
 
+(defun run-program (command &rest arguments &key &allow-other-keys)
+  (apply (function uiop:run-program) command arguments))
+
+(defun slurp-stream (stream)
+  "Read text from the output and error streams until both EOF or external-process exits."
+  (uiop/stream:slurp-stream-string stream))
 
 (defun regexp-compile (regexp)
   (cl-ppcre:create-scanner regexp :extended-mode t))
@@ -64,14 +69,6 @@
 (defun match-string (string range)
   (subseq string (first range) (second range)))
 
-(eval-when (:compile-toplevel :load-toplevel :execute) (shadow 'run-program))
-(defun run-program (command &rest arguments &key &allow-other-keys)
-  (if (listp command)
-      (apply (function ccl::run-program) (first command) (rest command) arguments)
-      (let ((command (split-sequence #\space command)))
-        (apply (function ccl::run-program) (first command) (rest command) arguments))))
-
-
 (defvar *verbose* nil)
 
 (defun print-if-verbose (object)
@@ -79,21 +76,6 @@
     (prin1 object)
     (terpri))
   object)
-
-
-(defun slurp-stream (stream)
-  "Read text from the output and error streams until both EOF or external-process exits."
-  (uiop/stream:slurp-stream-string stream)
-  #-(and)
-  (with-output-to-string (slurped-output)
-    (loop
-      :with output := (external-process-output-stream process)
-      :for out-char := (read-char-no-hang output nil :eof)
-      :until (eql out-char :eof)
-      :when (characterp out-char)
-        :do (write-char out-char slurped-output))
-    (loop :while (eql :running (external-process-status process))
-          :do (sleep 0.01))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -149,119 +131,117 @@ and read-from-string
 (defun emacsen ()
   (let ((emacsen '()))
     (dolist (socket *sockets* (reverse emacsen))
-      (let* ((process (run-program
-                       (print-if-verbose
-                        (list "emacsclient"
-                              (format nil "--socket-name=~A" socket)
-                              "--eval"
-                              "(mapcar (lambda (f) (list (frame-parameter f 'name) (frame-parameter f 'display))) (frame-list))"))
-                       :input nil :output :stream :error nil :wait nil))
-             (output (slurp-stream (external-process-output-stream process)))
-             (frames (if (eql 0 (nth-value 1 (external-process-status process)))
-                         (with-input-from-string (frames output)
-                           ;; Output from /Applications/Emacs.app/Contents/MacOS/bin/emacsclient 24.2 on MacOSX:
-                           ;; ((#1="EMACS" #2="iMac-Core-i5.local")
-                           ;;  (#1# #2#))
-                           ;;
-                           ;; Output from emacsclient 23.2 on linux:
-                           ;; ((" emacs at voyager.informatimago.com" nil))
-                           ;;
-                           ;; Output from /usr/bin/emacsclient 22.1 on MacOSX:
-                           ;; -emacs-pid 30294
-                           ;; -print ((#1="EMACS"&_#2="iMac&-Core&-i5.local")&n&_(#1#&_#2#))&n
-                           (let ((ch (peek-char nil frames)))
-                             (if (char= #\- ch)
-                                 (cdr (assoc '-print (emacsclient-22/read-output frames)))
-                                 (handler-case
-                                     (read frames nil)
-                                   (error (err)
-                                     (format *error-output* "~&While reading: ~S~%~A~%" output err)
-                                     (finish-output *error-output*)
-                                     nil)))))
-                         (progn
-                           (format t "~&~:@{emacsclient ~(~A~) with status ~A~%~}"
-                                   (multiple-value-list (external-process-status process)))
-                           (write-string output *error-output*)
-                           nil))))
-        (if frames
-            (push (list socket frames) emacsen)
-            (multiple-value-bind (all pid) (match "^.*server-([0-9]+)$" socket)
-              (if all
-                  (let ((pid (match-string socket  pid)))
-                    (with-open-stream (ps (external-process-output-stream
-                                           (run-program (print-if-verbose (list "ps" "-p" pid))
-                                                        :input nil :output :stream :wait nil)))
-                      (unless (loop
-                                :named search-emacs
-                                :for line = (read-line ps nil nil)
-                                :while line
-                                :if (match "emacs" line)
+      (multiple-value-bind (output error status)
+          (run-program
+           (print-if-verbose
+            (list "emacsclient"
+                  (format nil "--socket-name=~A" socket)
+                  "--eval"
+                  "(mapcar (lambda (f) (list (frame-parameter f 'name) (frame-parameter f 'display))) (frame-list))"))
+           :input nil :output :string :error nil :ignore-error-status t :wait nil)
+        (declare (ignore error))
+        (let ((frames (if (eql 0 status)
+                          (with-input-from-string (frames output)
+                            ;; Output from /Applications/Emacs.app/Contents/MacOS/bin/emacsclient 24.2 on MacOSX:
+                            ;; ((#1="EMACS" #2="iMac-Core-i5.local")
+                            ;;  (#1# #2#))
+                            ;;
+                            ;; Output from emacsclient 23.2 on linux:
+                            ;; ((" emacs at voyager.informatimago.com" nil))
+                            ;;
+                            ;; Output from /usr/bin/emacsclient 22.1 on MacOSX:
+                            ;; -emacs-pid 30294
+                            ;; -print ((#1="EMACS"&_#2="iMac&-Core&-i5.local")&n&_(#1#&_#2#))&n
+                            (let ((ch (peek-char nil frames)))
+                              (if (char= #\- ch)
+                                  (cdr (assoc '-print (emacsclient-22/read-output frames)))
+                                  (handler-case
+                                      (read frames nil)
+                                    (error (err)
+                                      (format *error-output* "~&While reading: ~S~%~A~%" output err)
+                                      (finish-output *error-output*)
+                                      nil)))))
+                          (progn
+                            (format t "~&~:@{emacsclient with status ~A~%~}" status)
+                            (write-string output *error-output*)
+                            nil))))
+          (if frames
+              (push (list socket frames) emacsen)
+              (multiple-value-bind (all pid) (match "^.*server-([0-9]+)$" socket)
+                (if all
+                    (let ((pid (match-string socket  pid)))
+                      (with-input-from-string (ps (run-program (print-if-verbose (list "ps" "-p" pid))
+                                                               :input nil :output :string :wait nil))
+                        (unless (loop
+                                  :named search-emacs
+                                  :for line = (read-line ps nil nil)
+                                  :while line
+                                  :if (match "emacs" line)
                                   :do (return-from search-emacs t)
-                                :finally  (return-from search-emacs nil))
-                        (delete-file socket)
-                        (setf *sockets* (delete socket *sockets*))))))))))))
+                                  :finally  (return-from search-emacs nil))
+                          (delete-file socket)
+                          (setf *sockets* (delete socket *sockets*)))))))))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar *emacsen*)
 
-(command :use-systems (:cl-ppcre :split-sequence)
-         :use-packages ("COMMON-LISP" "SCRIPT" "SPLIT-SEQUENCE")
-         :options (list* (option ("verbose" "-v" "--verbose") ()
-                                 "Add printing how things are done."
-                                 (setf *verbose* t))
+(options "mfod"
+         (option ("verbose" "-v" "--verbose") ()
+                 "Add printing how things are done."
+                 (setf *verbose* t))
 
-                         (option ("list" "-l" "--list") ()
-                                 "List the available emacs servers."
-                                 (handler-case
-                                     (loop
-                                       :for i :from 1
-                                       :for (server frames) :in *emacsen*
-                                       :do (format t "~2D) ~30A ~:{~1@*~16A ~0@*~S~:^~%~35T~}~%"
-                                                   i server frames))
-                                   (error (err) (invoke-debugger err))))
+         (option ("list" "-l" "--list") ()
+                 "List the available emacs servers."
+                 (handler-case
+                     (loop
+                       :for i :from 1
+                       :for (server frames) :in *emacsen*
+                       :do (format t "~2D) ~30A ~:{~1@*~16A ~0@*~S~:^~%~35T~}~%"
+                                   i server frames))
+                   (error (err) (invoke-debugger err))))
 
-                         (option ("select" "-s" "--select") (index)
-                                 "Select the server at the given index (from 1 up) as the default server."
-                                 (let* ((index (parse-integer index))
-                                        (uid    (getuid))
-                                        (server (ignore-errors (nth (1- index) *emacsen*))))
-                                   (if server
-                                       (uiop:run-program (print-if-verbose
-                                                          (list "ln" "-sf"
-                                                                (first server)
-                                                                (format nil "/tmp/emacs~A/server" uid)))))
-                                   (error "~A is not a server index. Please give an index between 1 and ~A"
-                                          index (length *emacsen*))))
+         (option ("select" "-s" "--select") (index)
+                 "Select the server at the given index (from 1 up) as the default server."
+                 (let* ((index (parse-integer index))
+                        (uid    (getuid))
+                        (server (ignore-errors (nth (1- index) *emacsen*))))
+                   (if server
+                       (uiop:run-program (print-if-verbose
+                                          (list "ln" "-sf"
+                                                (first server)
+                                                (format nil "/tmp/emacs~A/server" uid)))))
+                   (error "~A is not a server index. Please give an index between 1 and ~A"
+                          index (length *emacsen*))))
 
-                         (option ("open" "-o" "--open") (index)
-                                 "Make a new frame from the server at the given index (from 1 up) on the current DISPLAY."
-                                 (let* ((index   (parse-integer index))
-                                        (server  (ignore-errors (nth (1- index) *emacsen*)))
-                                        (display (uiop:getenv "DISPLAY")))
-                                   (cond
-                                     ((null server)
-                                      (error "~A is not a server index. Please give an index between 1 and ~A"
-                                             index (length *emacsen*)))
-                                     ((null display)
-                                      (error "There is no DISPLAY environment variable."))
-                                     (t
-                                      (make-frame (first server) :on-display display)))))
+         (option ("open" "-o" "--open") (index)
+                 "Make a new frame from the server at the given index (from 1 up) on the current DISPLAY."
+                 (let* ((index   (parse-integer index))
+                        (server  (ignore-errors (nth (1- index) *emacsen*)))
+                        (display (uiop:getenv "DISPLAY")))
+                   (cond
+                     ((null server)
+                      (error "~A is not a server index. Please give an index between 1 and ~A"
+                             index (length *emacsen*)))
+                     ((null display)
+                      (error "There is no DISPLAY environment variable."))
+                     (t
+                      (make-frame (first server) :on-display display)))))
 
-                         (option ("terminal" "-t" "--open-on-terminal") (index)
-                                 "Make a new frame from the server at the given index (from 1 up) in the terminal."
-                                 (let* ((index (parse-integer index))
-                                        (server (ignore-errors (nth (1- index) *emacsen*))))
-                                   (cond
-                                     ((null server)
-                                      (error "~A is not a server index. Please give an index between 1 and ~A"
-                                             index (length *emacsen*)))
-                                     (t
-                                      (make-frame (first server) :on-terminal t)))))
+         (option ("terminal" "-t" "--open-on-terminal") (index)
+                 "Make a new frame from the server at the given index (from 1 up) in the terminal."
+                 (let* ((index (parse-integer index))
+                        (server (ignore-errors (nth (1- index) *emacsen*))))
+                   (cond
+                     ((null server)
+                      (error "~A is not a server index. Please give an index between 1 and ~A"
+                             index (length *emacsen*)))
+                     (t
+                      (make-frame (first server) :on-terminal t)))))
 
-                         (help-option)
-                         (bash-completion-options)))
+         (help-option)
+         (bash-completion-options))
 
 (defun xor (a b) (or (and a (not b)) (and (not a) b)))
 

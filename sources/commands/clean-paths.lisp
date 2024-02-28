@@ -43,6 +43,7 @@
 ;;;;    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 ;;;;
 ;;;;*****************************************************************************
+(in-package "SCRIPT")
 
 (command :use-systems (:com.informatimago.common-lisp
                        :split-sequence
@@ -59,8 +60,6 @@
 This scripts builds an isomorphe directory hierarchy with the names
 cleaned up (removing most special and non ASCII characters).
 ")
-
-(in-package "COMMAND.CLEAN-PATHS")
 
 
 (defconstant s-ifmt  #o0170000)

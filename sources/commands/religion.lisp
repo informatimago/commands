@@ -39,7 +39,7 @@
 ;;;;    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ;;;;******************************************************************************
 
-(in-package "COMMAND.RELIGION")
+(command :documentation "See also: http://www.galactic-guide.com/articles/2R10.html")
 
 (defvar *religion-pathname*)
 ;; Could be a common file such as /usr/local/share/lib/religions or whatever..
@@ -349,6 +349,122 @@ of the religion."))
                  '(deity after-death organization
                    bubba policy number-of-spellings place))))
 
+
+#|
+
+(loop repeat 10000 always (code-valid-p (generate)))
+(explain  (generate))
+untitled: Invalid religion code '2I1D-3F1F'.
+          Please. use format: lnl-nlnl
+          with 'l' a majuscule letter and 'n' a digit.
+65
+
+(code-valid-p "2I1D-3F1F")
+nil
+"2I4O-3B?E"
+"1E4K-3C7E"
+(map nil (lambda (enum)  (map nil 'print (enumeration-constants enum)) (terpri))
+     '(deity after-death organization
+       bubba policy number-of-spellings place))
+
+(#\A "All powerful, all knowing, benevolent.")
+(#\B "All powerful, but one can usually pull pranks due to lack of all knowingness, benevolent.")
+(#\C "All knowing, but who the hell really cares due to lack of all powerfulness, benevolent.")
+(#\D "Neither all knowing nor all powerful, but just kind of there, benevolent.")
+(#\E "All powerful, all knowing, malevolent.")
+(#\F "All powerful, but one can usually pull pranks due to lack of all knowingness, malevolent.")
+(#\G "All knowing, but who the hell really cares due to lack of all powerfulness, malevolent.")
+(#\H "Neither all knowing nor all powerful, but just kind of there, malevolent.")
+(#\I "Whoever happens to be leader of the people at the time.")
+(#\J "Everything and everybody is part of the god.")
+(#\K "Everything and everybody, except for people members of the religion don't like, is part of god.")
+(#\L "God is a head of lettuce named Ralph.")
+(#\? "Unknown.")
+
+(#\0 "Everybody goes to a nice place.")
+(#\1 "Members of the religion go to a nice place, everybody else goes to an unpleasant place.")
+(#\2 "Members of the religion go to an unpleasant place, everybody else goes to a nice place.")
+(#\3 "Everybody goes to an unpleasant place.")
+(#\4 "Nobody goes anywhere.")
+(#\5 "Really bad people are forced to work in all night convenience stores in New Jersey.")
+(#\6 "Everybody is reincarnated.")
+(#\7 "Only people who deserve punishment are reincarnated.")
+(#\? "Unknown.")
+
+(#\A "first organization value.")
+(#\B "second organization value.")
+(#\C "third organization value.")
+(#\D "fourth organization value.")
+(#\E "fifth organization value.")
+(#\F "sixth organization value.")
+(#\G "seventh organization value.")
+(#\H "eighth organization value.")
+(#\I "ninth organization value.")
+(#\J "tenth organization value.")
+(#\K "eleventh organization value.")
+(#\L "twelfth organization value.")
+(#\M "thirteenth organization value.")
+(#\N "fourteenth organization value.")
+(#\O "fifteenth organization value.")
+(#\P "sixteenth organization value.")
+(#\Q "seventeenth organization value.")
+(#\R "eighteenth organization value.")
+(#\S "nineteenth organization value.")
+(#\T "twentieth organization value.")
+(#\U "twenty-first organization value.")
+(#\V "twenty-second organization value.")
+(#\W "twenty-third organization value.")
+(#\X "twenty-fourth organization value.")
+(#\Y "twenty-fifth organization value.")
+(#\Z "twenty-sixth organization value.")
+(#\? "Unknown.")
+
+(#\0 "first bubba value.")
+(#\1 "second bubba value.")
+(#\2 "third bubba value.")
+(#\3 "fourth bubba value.")
+(#\4 "fifth bubba value.")
+(#\5 "sixth bubba value.")
+(#\6 "seventh bubba value.")
+(#\7 "eighth bubba value.")
+(#\8 "ninth bubba value.")
+(#\9 "tenth bubba value.")
+(#\? "Unknown.")
+
+(#\A "Handed down from a single source.")
+(#\B "Voted upon by a collection of elders.")
+(#\C "Voted upon by everybody.")
+(#\D "Chosen by a random number generator.")
+(#\E "Determined by careful computer analysis.")
+(#\F "Determined by combatants representing each view playing Super Mario Brothers.")
+(#\Z "Nobody has ever tried to change the policy, so nobody knows just yet.")
+(#\? "Unknown.")
+
+(#\0 "first number-of-spellings value.")
+(#\1 "second number-of-spellings value.")
+(#\2 "third number-of-spellings value.")
+(#\3 "fourth number-of-spellings value.")
+(#\4 "fifth number-of-spellings value.")
+(#\5 "sixth number-of-spellings value.")
+(#\6 "seventh number-of-spellings value.")
+(#\7 "eighth number-of-spellings value.")
+(#\8 "ninth number-of-spellings value.")
+(#\9 "tenth number-of-spellings value.")
+(#\? "Unknown.")
+
+(#\A "No meetings.")
+(#\B "A building set aside for the purpose.")
+(#\C "A building which is also the gym for the local high school.")
+(#\D "Outside.")
+(#\E "In an airport or bus terminal.")
+(#\F "In a submarine.")
+(#\G "In a graveyard or mausoleum.")
+(#\F "In a bathtub or jacuzzi.")
+(#\? "Unknown.")
+
+|#
+
+
 ;;;-----------------------------------------------------------------
 ;;;
 ;;; Parsing
@@ -357,18 +473,28 @@ of the religion."))
 (defun imply (p q) (or (not p) q))
 (defun <=> (a b) (or (and a b) (and (not a) (not b))))
 
-
 (defun code-valid-p (code)
-  (and (= 8 (length code))
-       (char= #\- (aref code 3))
-       (or (char= #\? (aref code 0)) (upper-case-p (aref code 0)))
-       (or (char= #\? (aref code 1)) (digit-char-p (aref code 1)))
-       (or (char= #\? (aref code 2)) (upper-case-p (aref code 2)))
-       (or (char= #\? (aref code 4)) (digit-char-p (aref code 4)))
-       (or (char= #\? (aref code 5)) (upper-case-p (aref code 5)))
-       (or (char= #\? (aref code 6)) (digit-char-p (aref code 6)))
-       (or (char= #\? (aref code 7)) (upper-case-p (aref code 7)))))
-
+  (let ((base (case (digit-char-p (char code 0))
+                (0          1)
+                (otherwise  2))))
+    (flet ((digitp (index)
+             (let ((char (aref code (+ base index))))
+               (or (char= #\? char) (digit-char-p char))))
+           (letterp (index)
+             (let ((char (aref code (+ base index))))
+               (or (char= #\? char) (upper-case-p char)))))
+      (and (= (length code) (+ base 7))
+           (digit-char-p (aref code 0))
+           (or (= 1 base)
+               (let ((char (aref code 1)))
+                 (or (char= #\? char) (upper-case-p char))))
+           (digitp               0)
+           (letterp              1)
+           (char= #\- (aref code (+ base 2)))
+           (digitp               3)
+           (letterp              4)
+           (digitp               5)
+           (letterp              6)))))
 
 (defun explode-religion (rel)
   (flet ((invalid-religion-code (rel &rest additionnal-message)
@@ -460,7 +586,7 @@ of the religion."))
     (format t "~VA  Please. use format: lnl-nlnl ~%~
                ~0@*~VA  with 'l' a majuscule letter and 'n' a digit.~%"
             (length *program-name*) "")
-    (exit ex-dataerr))
+    (return-from explain ex-dataerr))
   (with-religion-code
       (num dei aft org bub pol spe pla) code
       (let* ((line " -------------------------------------------------------------------")
@@ -510,11 +636,12 @@ of the religion."))
        (format t "~A" message)
        (finish-output)
        (let* ((code (read-answer)))
-         (when code
-           (return-from choose code))
-         (format t " INVALID CODE '~A'.~%" code)
-         (finish-output)
-         (sleep 1)))))
+         (assert code)
+         (return-from choose code)
+         ;; (format t " INVALID CODE.~%")
+         ;; (finish-output)
+         ;; (sleep 1)
+         ))))
 
 (defun choose-something (message what what-label)
   (loop
@@ -602,55 +729,55 @@ of the religion."))
             (format t "~A~%" line))))))
 
 
-(command :documentation "See also: http://www.galactic-guide.com/articles/2R10.html"
-         :options (list* (option ("-g" "--generate") ()
-                                 "Generate a random religion."
-                                 (princ (generate)) (terpri)
-                                 (finish-output))
+(options "religion"
+         (option ("-g" "--generate") ()
+                 "Generate a random religion."
+                 (princ (generate)) (terpri)
+                 (finish-output))
 
 
-                         (option ("-G" "--generate-and-explain") ()
-                                 "Generate and explain random religion.
+         (option ("-G" "--generate-and-explain") ()
+                 "Generate and explain random religion.
 The code is generated and output to stderr,
 while the explainations are written to stdout."
-                                 (let ((religion-code (generate)))
-                                   (princ religion-code *error-output*) (terpri *error-output*)
-                                   (finish-output *error-output*)
-                                   (explain religion-code)))
+                 (let ((religion-code (generate)))
+                   (princ religion-code *error-output*) (terpri *error-output*)
+                   (finish-output *error-output*)
+                   (explain religion-code)))
 
-                         (option ("-e" "--explain") (religion-code)
-                                 "Explain a religion code."
-                                 (cond
-                                   ((code-valid-p religion-code) (explain religion-code))
-                                   ((lookup-code religion-code)  (explain (lookup-code religion-code)))
-                                   (t                            (explain religion-code))))
+         (option ("-e" "--explain") (religion-code)
+                 "Explain a religion code."
+                 (cond
+                   ((code-valid-p religion-code) (explain religion-code))
+                   ((lookup-code religion-code)  (explain (lookup-code religion-code)))
+                   (t                            (explain religion-code))))
 
-                         (option ("-i" "--interactive") ()
-                                 "Creates a religion interactively."
-                                 (interactive))
+         (option ("-i" "--interactive") ()
+                 "Creates a religion interactively."
+                 (interactive))
 
-                         (option ("-l" "--list") ()
-                                 "List known religions."
-                                 (loop
-                                   :for (code name) :in (sort *religion-db* (function string<) :key (function line-code))
-                                     :initially (progn
-                                                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")
-                                                  (format t " ~9D  ~:(~A~)~%" "Code" "Name")
-                                                  (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------"))
-                                   :do (format t " ~9D  ~:(~A~)~%" code name)
-                                   :finally (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")))
+         (option ("-l" "--list") ()
+                 "List known religions."
+                 (loop
+                   :for (code name) :in (sort *religion-db* (function string<) :key (function line-code))
+                   :initially (progn
+                                (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")
+                                (format t " ~9D  ~:(~A~)~%" "Code" "Name")
+                                (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------"))
+                   :do (format t " ~9D  ~:(~A~)~%" code name)
+                   :finally (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")))
 
 
-                         (option ("-V" "--version") ()
-                                 "Prints the version of this script."
-                                 (format t "~A version 2.0~%Running on ~A ~A~%"
-                                         *program-name*
-                                         (lisp-implementation-type) (lisp-implementation-version)))
+         (option ("-V" "--version") ()
+                 "Prints the version of this script."
+                 (format t "~A version 2.0~%Running on ~A ~A~%"
+                         *program-name*
+                         (lisp-implementation-type) (lisp-implementation-version)))
 
-                         (option ("-C" "--copyright") ()
-                                 "Prints the version of this script."
-                                 (format t "~A copyright and license:~%" *program-name*)
-                                 (format t "
+         (option ("-C" "--copyright") ()
+                 "Prints the version of this script."
+                 (format t "~A copyright and license:~%" *program-name*)
+                 (format t "
     Copyright Pascal J. Bourguignon 2002 - 2021
 
     mailto:pjb@informatimago.com
@@ -670,8 +797,8 @@ while the explainations are written to stdout."
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 "))
-                         (help-option)
-                         (bash-completion-options)))
+         (help-option)
+         (bash-completion-options))
 
 (defun main (arguments)
   (setf *religion-pathname* (make-pathname :name "religions" :type "data" :version NIL :case :local
@@ -679,7 +806,5 @@ while the explainations are written to stdout."
         *religion-db* (load-religion-database *religion-pathname*)
         *debug* t
         *random-state* (make-random-state t))
-  (parse-options *command* arguments)
+  (parse-options (or *command* (command-named "religion")) arguments)
   ex-ok)
-
-;;;; THE END ;;;;

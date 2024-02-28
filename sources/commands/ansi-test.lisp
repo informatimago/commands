@@ -38,6 +38,18 @@
 ;;;;    Software Foundation, Inc., 59 Temple Place, Suite 330,
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
+(in-package "SCRIPT")
+
+(defparameter *program-version* "1.0.2")
+(defparameter *program-name* "ansi-test")
+
+(command :use-systems (:com.informatimago.common-lisp)
+         :use-packages ("COMMON-LISP"
+                        "SCRIPT"
+                        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
+         :main "COMMAND.ANSI-TEST:MAIN")
+
+(cl:in-package "SCRIPT")
 
 (defpackage "E48"
   (:use)
@@ -58,31 +70,24 @@
            "STAB" "STS" "STX" "SU" "SUB" "SVS" "SYN" "TAC" "TALE"
            "TATE" "TBC" "TCC" "TSR" "TSS" "VPA" "VPB" "VPR" "VT"
            "VTS"))
-(in-package "E48")
+(cl:in-package "E48")
 
 (cl:eval-when (:compile-toplevel :load-toplevel :execute)
   (com.informatimago.common-lisp.cesarum.ecma048:define-all-functions
         :export cl:t :8-bit cl:nil :print cl:t :result-type cl:string))
 
-(cl:in-package "COMMON-LISP-USER")
-(defpackage "COM.INFORMATIMAGO.COMMAND.ANSI-TEST"
-  (:use "COMMON-LISP"
-        "SCRIPT"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
-  (:shadowing-import-from "SCRIPT" "CONCAT")
-  (:export "MAIN"))
-(in-package "COM.INFORMATIMAGO.COMMAND.ANSI-TEST")
+(cl:in-package "COMMAND.ANSI-TEST")
 
 (defparameter *program-version* "1.0.2")
 (defparameter *program-name* "ansi-test")
 
-(command :use-systems (:com.informatimago.common-lisp)
-         :main "COM.INFORMATIMAGO.COMMAND.ANSI-TEST:MAIN"
-         :options (list* (option ("version" "-V" "--version") ()
-                                 "Report the version of this script."
-                                 (format t "~A ~A~%" *program-name* *program-version*))
-                         (help-option)
-                         (bash-completion-options)))
+(options "ansi-test"
+         (option ("version" "-V" "--version") ()
+                 "Report the version of this script."
+                 (format t "~A ~A~%" script:*program-name* script:*program-version*))
+         (help-option)
+         (bash-completion-options))
+
 
 (defenum sgr-codes
   "

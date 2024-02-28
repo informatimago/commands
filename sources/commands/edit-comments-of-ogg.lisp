@@ -121,10 +121,10 @@ RETURN:  a cons with two substrings of string such as:
 
 
 
-(defconstant comext ".inf")
+(defparameter comext ".inf")
 
-(defconstant fields '(artist album title version tracknumber organization genre
-                      description date location copyright));;FIELDS
+(defparameter fields '(artist album title version tracknumber organization genre
+                       description date location copyright)) ;;FIELDS
 (defvar fields-names (mapcar 'symbol-name fields))
 
 (defun usage ()
