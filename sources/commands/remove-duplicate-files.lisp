@@ -18,16 +18,16 @@
       (format *trace-output* "Processing ~A~%" dir)
       (let ((sumtab (make-hash-table)))
         (format *trace-output* "  Checksumming...~%")
-        (with-open-stream (sums (uiop:run-program
-                                 (format nil "md5sum ~A"
-                                         (namestring
-                                          (make-pathname :name :wild
-                                                         :type :wild
-                                                         :defaults dir)))
-                                 :input nil :output :stream :wait nil
-                                 :force-shell t))
+        (with-input-from-string (sums (uiop:run-program
+                                       (format nil "md5sum ~A"
+                                               (namestring
+                                                (make-pathname :name :wild
+                                                               :type :wild
+                                                               :defaults dir)))
+                                       :input nil :output :string :wait nil
+                                       :force-shell t))
           (loop :for (sum file) := (list (read sums nil nil)
-                                       (read-line sums nil nil))
+                                         (read-line sums nil nil))
                 :while sum
                 :do (push (string-trim " " file) (gethash sum sumtab))))
         (format *trace-output* "  Deleting doubles...~%")

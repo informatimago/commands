@@ -45,19 +45,19 @@
   (format *trace-output* "### port ~{~A~^ ~}~%" (append options packs))
   (force-output *trace-output*)
   (let ((*processing* (append (loop :for (p v) :on packs :by (function cddr)
-                                 :if v :collect (format nil "~A ~A" p v)
-                                 :else :collect p)
+                                    :if v :collect (format nil "~A ~A" p v)
+                                    :else :collect p)
                               *processing*))
         (before '()))
-    (with-open-stream (pout (uiop:run-program "port" :arguments (append options packs) :input nil :output :stream :wait nil))
+    (with-input-from-string (pout (uiop:run-program "port" :arguments (append options packs) :input nil :output :string :wait nil))
       (loop
-         :with prefix = "--->  	"
-         :for line = (read-line pout nil nil)
-         :while line
-         :do (write-line line)
-         :do (when (and (< (length prefix) (length line))
-                        (string= line prefix :end1 (length prefix)))
-               (push (subseq line (length prefix)) before))))
+        :with prefix = "--->  	"
+        :for line = (read-line pout nil nil)
+        :while line
+        :do (write-line line)
+        :do (when (and (< (length prefix) (length line))
+                       (string= line prefix :end1 (length prefix)))
+              (push (subseq line (length prefix)) before))))
     (when before
       (dolist (pack before)
         (format *trace-output* "pack = ~S~% *processing* = ~S~2%" pack *processing*)

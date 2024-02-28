@@ -44,11 +44,11 @@
                       (dolist (path (list #+clisp (format nil "/proc/~D/fd/1" (posix:process-id))
                                           "/dev/tty")
                                     nil)
-                        (with-open-stream (stty (uiop:run-program (format nil "stty -a < ~S" path)
-                                                                  :force-shell t
-                                                                  :input :terminal
-                                                                  :output :stream
-                                                                  :wait nil))
+                        (with-input-from-string (stty (uiop:run-program (format nil "stty -a < ~S" path)
+                                                                        :force-shell t
+                                                                        :input :terminal
+                                                                        :output :string
+                                                                        :wait nil))
                           (loop
                             :for line = (read-line stty nil nil)
                             :while line

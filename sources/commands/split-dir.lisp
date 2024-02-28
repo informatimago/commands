@@ -52,12 +52,11 @@
                   (directory (concatenate 'string dir-upath "/*/")))))
     (unless directories
       (error "Cannot find files or directories in ~A/" dir-upath))
-    (with-open-stream
-        (in (uiop:run-program
-             (list* "du" "-s" "-k" directories)
-             :input nil
-             :output :stream
-             :wait nil))
+    (with-input-from-string (in (uiop:run-program
+                                 (list* "du" "-s" "-k" directories)
+                                 :input nil
+                                 :output :string
+                                 :wait nil))
       (loop
         with result = '()
         for line = (read-line in nil nil)

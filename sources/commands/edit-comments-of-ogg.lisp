@@ -425,12 +425,12 @@ RETURN:  a cons with two substrings of string such as:
       (if (probe-file fcom)
           (progn
             (format t "~a: Writting comments to '~a'...~%" *program-name* fogg)
-            (copy-stream (uiop:run-program
-                          (list "/usr/local/bin/vorbiscomment" "-w" fogg "-c" fcom)
-                          :input  nil
-                          :output :stream
-                          :wait nil)
-                         *standard-output*))
+            (write-string (uiop:run-program
+                           (list "/usr/local/bin/vorbiscomment" "-w" fogg "-c" fcom)
+                           :input  nil
+                           :output :string
+                           :wait nil)
+                          *standard-output*))
           (format t "~a: Missing '~a'.~%" *program-name* fcom)))))
 
 

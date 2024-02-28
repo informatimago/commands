@@ -1044,11 +1044,8 @@ SEE ALSO:   SHELL
 (defun uname (&rest options)
   "Without OPTIONS, return a keyword naming the system (:LINUX, :DARWIN, etc).
 With options, returns the first line output by uname(1)."
-  (with-open-stream (uname #+ccl (ccl:external-process-output-stream
-                                  (ccl:run-program "uname" (prepare-options options)
-                                                   :input nil :output :stream :wait nil))
-                           #-ccl (run-program (cons "uname" (prepare-options options))
-                                              :input nil :output :stream :wait nil))
+  (with-input-from-string (uname (run-program (cons "uname" (prepare-options options))
+                                              :input nil :output :string :wait nil))
     (values (if options
                 (read-line uname)
                 (intern (string-upcase (read-line uname))

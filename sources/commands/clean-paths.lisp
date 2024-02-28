@@ -432,7 +432,7 @@ RETURN: The path to a file found under `directory' whose inode is `inode',
     (uiop:run-program (format nil "find ~A -inum ~A -print"
                               (script:shell-quote-argument directory)
                               inode)
-                      :output :stream
+                      :output :string
                       :wait nil)
     #\newline)))
 

@@ -89,60 +89,60 @@ RETURN: number of sectors per disk;
         number of sector per track;
         start sector.
 "
-    (with-open-stream (inp (uiop:run-program
-                            (list "hdparm" "-g"
-                                           (etypecase device
-                                             (string device)
-                                             (pathname (namestring device))))
-                          :output :stream :wait nil))
+  (with-input-from-string (inp (uiop:run-program
+                                (list "hdparm" "-g"
+                                      (etypecase device
+                                        (string device)
+                                        (pathname (namestring device))))
+                                :output :string :wait nil))
     (let ((*read-eval* nil)
           (*read-base* 10.))
       (loop
-         :with cylinders = nil
-         :with heads = nil
-         :with sectors = nil
-         :with total-sectors = nil
-         :with start = nil
-         :for line = (read-line inp nil nil)
-         :while line
-         :until (eq 'geometry (ignore-errors (read-from-string line)))
-         :finally (let ((pos (position #\= line)))
-                    (unless pos
-                      (error "unexpected format for hdparm -g output: ~S" line))
-                    (incf pos)
-                    (multiple-value-setq (cylinders pos)
-                      (parse-integer line :start pos :junk-allowed t))
-                    (incf pos)
-                    (multiple-value-setq (heads pos)
-                      (parse-integer line :start pos :junk-allowed t))
-                    (incf pos)
-                    (multiple-value-setq (sectors pos)
-                      (parse-integer line :start pos :junk-allowed t))
-                    (setf pos (position #\= line :start pos))
-                    (unless pos
-                      (error "unexpected format for hdparm -g output: ~S" line))
-                    (incf pos)
-                    (multiple-value-setq (total-sectors pos)
-                      (parse-integer line :start pos :junk-allowed t))
-                    (incf pos)
-                    (setf pos (position #\= line :start pos))
-                    (unless pos
-                      (error "unexpected format for hdparm -g output: ~S" line))
-                    (incf pos)
-                    (multiple-value-setq (start pos)
-                      (parse-integer line :start pos :junk-allowed t))
-                    (return-from geometry
-                      (values total-sectors
-                              cylinders heads sectors start)))))))
+        :with cylinders = nil
+        :with heads = nil
+        :with sectors = nil
+        :with total-sectors = nil
+        :with start = nil
+        :for line = (read-line inp nil nil)
+        :while line
+        :until (eq 'geometry (ignore-errors (read-from-string line)))
+        :finally (let ((pos (position #\= line)))
+                   (unless pos
+                     (error "unexpected format for hdparm -g output: ~S" line))
+                   (incf pos)
+                   (multiple-value-setq (cylinders pos)
+                     (parse-integer line :start pos :junk-allowed t))
+                   (incf pos)
+                   (multiple-value-setq (heads pos)
+                     (parse-integer line :start pos :junk-allowed t))
+                   (incf pos)
+                   (multiple-value-setq (sectors pos)
+                     (parse-integer line :start pos :junk-allowed t))
+                   (setf pos (position #\= line :start pos))
+                   (unless pos
+                     (error "unexpected format for hdparm -g output: ~S" line))
+                   (incf pos)
+                   (multiple-value-setq (total-sectors pos)
+                     (parse-integer line :start pos :junk-allowed t))
+                   (incf pos)
+                   (setf pos (position #\= line :start pos))
+                   (unless pos
+                     (error "unexpected format for hdparm -g output: ~S" line))
+                   (incf pos)
+                   (multiple-value-setq (start pos)
+                     (parse-integer line :start pos :junk-allowed t))
+                   (return-from geometry
+                     (values total-sectors
+                             cylinders heads sectors start)))))))
 
 
 (defun block-size (device)
-  (with-open-stream (inp (uiop:run-program
-                          (list "stat" "-c" "%o"
-                                (etypecase device
-                                  (string device)
-                                  (pathname (namestring device))))
-                          :output :stream :wait nil))
+  (with-input-from-string (inp (uiop:run-program
+                                (list "stat" "-c" "%o"
+                                      (etypecase device
+                                        (string device)
+                                        (pathname (namestring device))))
+                                :output :string :wait nil))
     (let ((*read-eval* nil)
           (*read-base* 10.))
       (or (read inp nil nil)
