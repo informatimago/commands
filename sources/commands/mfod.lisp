@@ -77,6 +77,11 @@
     (terpri))
   object)
 
+(defun verbose-option-p (arguments)
+  (member-if (lambda (argument)
+               (member argument '("verbose" "-v" "--verbose") :test (function string=)))
+             arguments))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -93,6 +98,52 @@
                 sym)))))
 
 (defvar *sockets* nil)
+
+(defun getenv-non-empty (name)
+  (let ((value (uiop:getenv name)))
+    (and value
+         (< 0 (length value))
+         value)))
+
+(defun pathname-directory-pathname (pathname)
+  (make-pathname :name nil :type nil :version nil :defaults pathname))
+
+(defun socket-pathnames-from-patterns (&rest patterns)
+  (remove-if-not (function probe-file)
+                 (mapcan (lambda (pattern)
+                           (ignore-errors (directory pattern)))
+                         patterns)))
+
+(defun emacs-socket-candidates ()
+  (let* ((uid (getuid))
+         (explicit-server (getenv-non-empty "EMACS_SERVER_FILE"))
+         (xdg-runtime-dir (getenv-non-empty "XDG_RUNTIME_DIR"))
+         (tmpdir          (or (getenv-non-empty "TMPDIR") "/tmp/"))
+         (patterns        '()))
+    (when explicit-server
+      (let* ((server (pathname explicit-server))
+             (server-name (file-namestring server))
+             (server-dir  (pathname-directory-pathname server)))
+        (push server patterns)
+        (push (merge-pathnames (make-pathname :name :wild :type nil :version nil
+                                              :defaults (merge-pathnames
+                                                         (make-pathname :name server-name :type nil :version nil)
+                                                         server-dir))
+                               server-dir)
+              patterns)))
+    (when xdg-runtime-dir
+      (setf patterns (nconc (list (format nil "~A/emacs/server" xdg-runtime-dir)
+                                  (format nil "~A/emacs/server-*" xdg-runtime-dir))
+                            patterns)))
+    (setf patterns (nconc (list (format nil "~A/emacs*/server" tmpdir)
+                                (format nil "~A/emacs*/server-*" tmpdir)
+                                (format nil "/tmp/emacs~A/server" uid)
+                                (format nil "/tmp/emacs~A/server-*" uid))
+                          patterns))
+    (sort (mapcar (function namestring)
+                  (remove-duplicates (apply (function socket-pathnames-from-patterns) patterns)
+                                     :test (function equalp)))
+          (function string-lessp))))
 
 (defun emacsclient-22/process-value (value)
   "
@@ -264,25 +315,16 @@ and read-from-string
                             "--tty")))))))
 
 (defun main (arguments)
-  (setf *sockets* (let ((uid (getuid)))
-                    (sort
-                     (mapcar (function namestring)
-                             (remove-if-not (function probe-file)
-                                            (remove-duplicates
-                                             ;; getting server is not so useful since directory will
-                                             ;; return the truename...
-                                             (append (directory (format nil "/tmp/emacs~A/server"   uid))
-                                                     (directory (format nil "/tmp/emacs~A/server-*" uid)))
-                                             :test (function equalp))))
-                     (function string-lessp))))
-  (setf *emacsen* (emacsen))
-  (if (null *emacsen*)
-      (progn
-        (format t "There is no emacs server~%")
-        ex-unavailable)
-      (parse-options *command* arguments
-                     (lambda ()
-                       (call-option-function *command* "help" '())
-                       ex-noinput))))
+  (let ((*verbose* (and arguments (verbose-option-p arguments))))
+    (setf *sockets* (emacs-socket-candidates))
+    (setf *emacsen* (emacsen))
+    (if (null *emacsen*)
+        (progn
+          (format t "There is no emacs server~%")
+          ex-unavailable)
+        (parse-options *command* arguments
+                       (lambda ()
+                         (call-option-function *command* "help" '())
+                         ex-noinput)))))
 
 ;;;; THE END ;;;;
