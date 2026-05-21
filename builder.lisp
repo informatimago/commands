@@ -190,7 +190,7 @@
     (write-line "#!/bin/bash")
     (dolist (name *all-commands*)
       (unless (string= name "commands")
-        (format t "ln -s commands ~A~%" name)))))
+        (format t "ln -sf commands ~A~%" name)))))
 
 
 

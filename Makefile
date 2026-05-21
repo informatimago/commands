@@ -83,7 +83,13 @@ ALL_PROGRAMS=   \
 # all:$(ALL_PROGRAMS)
 all:commands
 
-EXECUTABLE = bin/commands-$(shell uname -m)
+OS_NAME = $(shell uname -s)
+ARCH_NAME = $(shell uname -m)
+HOST_NAME = $(shell hostname -s 2>/dev/null || hostname)
+EXECUTABLE = bin/commands-$(OS_NAME)-$(ARCH_NAME)
+HOST_EXECUTABLE = bin/commands-$(OS_NAME)-$(ARCH_NAME)-$(HOST_NAME)
+COMPAT_EXECUTABLE = bin/commands-$(ARCH_NAME)
+WRAPPER = bin/commands
 
 CLISP = clisp
 CLISP_OPTIONS =
@@ -102,22 +108,31 @@ HERE=$(shell pwd)
 
 .PHONY: all clean test commands
 
-commands:$(EXECUTABLE)
+commands:$(EXECUTABLE) $(HOST_EXECUTABLE) $(WRAPPER)
 
-$(EXECUTABLE) bin/symlink-commands:generate-commands.lisp generate.lisp Makefile sources/*.lisp sources/commands/*.lisp
+$(EXECUTABLE) $(HOST_EXECUTABLE) $(COMPAT_EXECUTABLE) bin/symlink-commands:generate-commands.lisp generate.lisp Makefile sources/*.lisp sources/commands/*.lisp
 	@printf "// Generating Executable from %s source: %s\n" "Lisp" $@
 	@printf "// Using %s\n" "$(LISP)"
 	-rm -rf ~/.cache/common-lisp/$(LISP)-*$(HERE)
 	$(LISP) $(LISP_OPTIONS) --load generate-commands.lisp # > commands-lisp-ccl.log 2>&1
 	@mv -v commands         $(EXECUTABLE)
+	@ln -sf $(notdir $(EXECUTABLE)) $(HOST_EXECUTABLE)
+	@ln -sf $(notdir $(EXECUTABLE)) $(COMPAT_EXECUTABLE)
 	@mv -v symlink-commands bin/
 	chmod 755 bin/symlink-commands
 
+$(WRAPPER):commands-wrapper.sh
+	install -m 755 commands-wrapper.sh $(WRAPPER)
+
 clean:
 	-rm -f bin/commands
+	-rm -f bin/commands-*
 	-find . \( -name \*.o -o -name \*.fas -o -name \*.lib -o -name \*.log -o -name \*.[dl]x64fsl \) -exec rm {} +
 #	-rm -f $(ALL_PROGRAMS)
 
-install:$(EXECUTABLE) bin/symlink-commands
-	install -m 755 $(EXECUTABLE)        ~/bin/commands
+install:$(EXECUTABLE) $(HOST_EXECUTABLE) $(WRAPPER) bin/symlink-commands
+	install -m 755 $(EXECUTABLE)        ~/bin/$(notdir $(EXECUTABLE))
+	ln -sf $(notdir $(EXECUTABLE))      ~/bin/$(notdir $(HOST_EXECUTABLE))
+	ln -sf $(notdir $(EXECUTABLE))      ~/bin/$(notdir $(COMPAT_EXECUTABLE))
+	install -m 755 $(WRAPPER)           ~/bin/commands
 	install -m 755 bin/symlink-commands ~/bin/

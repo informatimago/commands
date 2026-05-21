@@ -6,3 +6,7 @@
 *.bak
 *.lx64fsl
 *.dx64fsl
+*.dSYM
+bin/
+sources/commands/print-stat-sizes
+system-index.txt
