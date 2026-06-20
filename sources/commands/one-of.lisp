@@ -95,6 +95,7 @@ remaining arguments, then they're all printed in random order.
                                      count (<= count 0))
                              count)))))
 
+         (verbose-option)
          (help-option)
          (bash-completion-options))
 

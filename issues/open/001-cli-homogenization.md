@@ -4,7 +4,7 @@ title: Homogenize CLI options (-h/--help, -v/--verbose, -V/--version)
 severity: high
 commands: []
 labels: [epic, cli, enhancement]
-status: open
+status: in-progress - helpers VERSION-OPTION/VERBOSE-OPTION/STANDARD-OPTIONS added+exported; wired into new-password/mfod/one-of/religion/ansi-test; remaining commands TODO (blocked partly on issue 006)
 ---
 
 # Homogenize CLI options (-h/--help, -v/--verbose, -V/--version)

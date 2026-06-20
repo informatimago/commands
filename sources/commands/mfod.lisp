@@ -291,6 +291,7 @@ and read-from-string
                      (t
                       (make-frame (first server) :on-terminal t)))))
 
+         (version-option)
          (help-option)
          (bash-completion-options))
 

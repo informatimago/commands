@@ -85,6 +85,7 @@
          (option ("version" "-V" "--version") ()
                  "Report the version of this script."
                  (format t "~A ~A~%" script:*program-name* script:*program-version*))
+         (verbose-option)
          (help-option)
          (bash-completion-options))
 
