@@ -39,13 +39,22 @@ shared specials, which is redundant but not harmful at run time (and the global
   mfod defines nothing before the form, so today it is harmless. See epic 003.
 - mfod had no `-V/--version` even though it defines `*program-version*` "1.0.2".
 
-## Done
+## Done (verified against a real build)
 
-- Added `(version-option)` to the `mfod` options list (commit). `mfod -V` now
-  works (subject to issue 006 re: the global version value).
+- Added `(version-option)` to the `mfod` options list.
+- **Found and fixed a second, real bug:** `main` probed for emacs servers and
+  returned early ("There is no emacs server", `ex-unavailable`) **before**
+  calling `parse-options`.  So with no running emacs server, `mfod -V`, `-h`,
+  `--verbose` and `--bash-completions` were all ignored.  `main` now parses the
+  options first (so the standard options are honoured regardless) and reports
+  server status from the no-argument default thunk.  Verified: `mfod -V` and
+  `mfod --help` work with no emacs server present.
 
-## Deferred (needs a build to verify)
+The version value itself is still the global (issue 006).
+
+## Deferred (needs the target platform to verify)
 
 - Removing the redundant `(in-package "SCRIPT")` — safe per the analysis above
-  but should be confirmed by an actual `make` build; folded into epic 003.
+  (the build confirms nothing is defined before the `command` form); folded
+  into epic 003.
 - Dropping the redundant `(defvar *verbose* nil)` (line 72).
