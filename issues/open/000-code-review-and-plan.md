@@ -61,6 +61,9 @@ minor cleanups and data fixes.
 
 ## Suggested order of work
 
+Note: I've added some NOTES in the issues, and marked some of them
+CANCELLED (the command should be git rm'ed).
+
 1. Land the framework helpers from **001** (`version-option`, `verbose-option`)
    and the portability shims from **004** (`run-program`/pipe streams) first —
    most other fixes depend on them.

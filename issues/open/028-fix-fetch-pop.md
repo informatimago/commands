@@ -4,7 +4,7 @@ title: `fetch-pop`: broken auth checks, always-delete, swapped host/port
 severity: high
 commands: [fetch-pop]
 labels: [bug, data-loss-risk]
-status: open
+status: CANCELLED nobody use pop anymore really.
 ---
 
 # `fetch-pop`: broken auth checks, always-delete, swapped host/port

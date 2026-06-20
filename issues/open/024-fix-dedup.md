@@ -29,3 +29,15 @@ status: open
 
 Correct `:main`; remove `in-package`; add `-n/--dry-run` (default safe), `-h`,
 confirmation; handle malformed lines; add `-v/-V`.
+
+By default, move the files to be deleted to a Trash directory (with
+care to avoid overriding homonym files in Trash.  The Trash directory
+may be system defined (eg. on macOS), or may be passed in an option
+--trash $dir or have a default value (XDG based). --help should tell
+where the Trash is.
+There should be an option --empty-trash for non-system trashes.
+
+This command help should explicit clearly what it does.  Is it not a
+duplicate of remove-duplicate-files? If they're doing 90% the same
+thing, perhaps it's better to merge them and use options of the
+variants?

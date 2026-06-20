@@ -4,7 +4,7 @@ title: Finish `cpcd`: stub main, clisp-only impl commented out
 severity: medium
 commands: [cpcd]
 labels: [incomplete, portability]
-status: open
+status: CANCELED - nobody use CD anymore. Remove this command.
 ---
 
 # Finish `cpcd`: stub main, clisp-only impl commented out

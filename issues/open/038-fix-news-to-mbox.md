@@ -4,7 +4,7 @@ title: `news-to-mbox`: debug output corrupts mbox; dead arg parser; weekday typo
 severity: medium
 commands: [news-to-mbox]
 labels: [bug, partial]
-status: open
+status: CANCELLED nobody use nntp anymore :-(
 ---
 
 # `news-to-mbox`: debug output corrupts mbox; dead arg parser; weekday typo

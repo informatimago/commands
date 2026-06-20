@@ -21,3 +21,9 @@ exists but nothing sets it; header BUGS (21) asks for `--help`/`--dry-run`.
   `(error "Not implemented yet.")` (595); `set-flac-metadata`/`verbose-rename-file`
   (570-578) are `(warn "Not implemented yet.")` but unused — drop or implement.
 - Only cd-info 0.83 parsed (0.82 unsupported) — implement if needed.
+
+
+NOTE: I have a collection of flac files from audio CD. They would need to be identified and renamed, and tagged nicely.
+However, I wonder if using an algorithmic tool is the way to proceed. Perhaps it's a task for an AI?
+
+Let's defer work on this command for now.

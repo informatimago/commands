@@ -4,7 +4,7 @@ title: `euronews`: player disabled + returns after first selection; dead data so
 severity: low
 commands: [euronews]
 labels: [bug, partial]
-status: open
+status: CANCELLED these streams are long gone.
 ---
 
 # `euronews`: player disabled + returns after first selection; dead data source
