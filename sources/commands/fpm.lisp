@@ -60,10 +60,7 @@ management system (hence the need of this tool!).
 (list (command-named "FPM") (command-named "COMMAND.FPM"))
 
 (options "fpm"
-         (option ("version" "-V" "--version") ()
-                 "Report the version of this script and the underlying package system."
-                 (format t "~A ~A~%" *program-name* *program-version*)
-                 (fpm version))
+         (version-option)
 
 
          (option ("verbose" "-v" "--verbose") ()

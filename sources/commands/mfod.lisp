@@ -319,13 +319,18 @@ and read-from-string
   (let ((*verbose* (and arguments (verbose-option-p arguments))))
     (setf *sockets* (emacs-socket-candidates))
     (setf *emacsen* (emacsen))
-    (if (null *emacsen*)
-        (progn
-          (format t "There is no emacs server~%")
-          ex-unavailable)
-        (parse-options *command* arguments
-                       (lambda ()
-                         (call-option-function *command* "help" '())
-                         ex-noinput)))))
+    ;; Parse the options first, so --help/--version/--verbose are honoured
+    ;; even when no emacs server is running.  With no arguments, report the
+    ;; server status (or show help when a server is available).
+    (parse-options *command* arguments
+                   (lambda ()
+                     (if (null *emacsen*)
+                         (progn
+                           (format t "There is no emacs server~%")
+                           (exit ex-unavailable))
+                         (progn
+                           (call-option-function *command* "help" '())
+                           (exit ex-noinput)))))
+    ex-ok))
 
 ;;;; THE END ;;;;
