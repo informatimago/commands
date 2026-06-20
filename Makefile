@@ -21,16 +21,13 @@ ALL_PROGRAMS=   \
 	cookie-loop \
 	cookie-merge \
 	cookie \
-	cpcd \
 	dedup \
 	departement \
 	diss \
 	downcase \
 	edit-comments-of-ogg \
 	entropy \
-	euronews \
 	extend-identifiers \
-	fetch-pop \
 	fpm \
 	generate-hw \
 	generate \
@@ -52,7 +49,6 @@ ALL_PROGRAMS=   \
 	merge \
 	mfod \
 	new-password \
-	news-to-mbox \
 	nls \
 	one-of \
 	pic-resize \

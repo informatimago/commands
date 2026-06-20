@@ -2,14 +2,14 @@
 id: 003
 title: Remove (in-package "SCRIPT") package-pollution anti-pattern
 severity: high
-commands: [mfod, cookie-diff, dedup, fetch-pop, surveille-web-pages, svn-locate-revision, clar]
+commands: [mfod, cookie-diff, dedup, surveille-web-pages, svn-locate-revision, clar]
 labels: [epic, framework, bug]
 status: open
 ---
 
 # Remove (in-package "SCRIPT") package-pollution anti-pattern
 
-**Severity:** high  **Commands:** `mfod`, `cookie-diff`, `dedup`, `fetch-pop`, `surveille-web-pages`, `svn-locate-revision`, `clar`  **Labels:** epic, framework, bug
+**Severity:** high  **Commands:** `mfod`, `cookie-diff`, `dedup`, `surveille-web-pages`, `svn-locate-revision`, `clar`  **Labels:** epic, framework, bug
 
 ## Problem
 
@@ -29,7 +29,6 @@ likewise overwrite the framework specials.
 - `mfod.lisp` — redefines `SCRIPT:RUN-PROGRAM`, `*verbose*`, `*program-version*`.
 - `cookie-diff.lisp:3`
 - `dedup.lisp:2`
-- `fetch-pop.lisp:57`
 - `surveille-web-pages.lisp:53` — also defines pipe-stream stubs into SCRIPT.
 - `svn-locate-revision.lisp:34`
 - `clar.lisp:41` (`(in-package "SCRIPT")` — less harmful but same smell)

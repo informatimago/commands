@@ -41,10 +41,16 @@ The framework lives in `sources/script.lisp` / `sources/packages.lisp`
 
 - `box` — see issue 010
 - `menu` — see issue 011
-- `cpcd` — see issue 012
 - `clean-bd-archive` — see issue 013
 - `surveille-web-pages` — see issue 014
 - `svn-locate-revision` — see issue 015
+- ~~`cpcd`~~ — CANCELLED (issue 012, command removed: nobody uses CDs)
+
+## Cancelled commands (removed from the tree)
+
+`cpcd`, `fetch-pop`, `news-to-mbox`, `euronews` were removed by the maintainer
+(obsolete: CD ripping / POP / NNTP / dead streams). Their issues are in
+`issues/closed/`.
 
 ## Cross-cutting epics
 
