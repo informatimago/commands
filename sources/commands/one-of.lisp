@@ -121,7 +121,6 @@ remaining arguments, then they're all printed in random order.
   (setf *probability* nil
         *count*       nil
         *items*       '()
-        *debug*       t
         *random-state* (make-random-state t))
 
   (parse-options *command* arguments

@@ -4,7 +4,7 @@ title: `new-password`: undefined `concat`/`concatf` at runtime
 severity: high
 commands: [new-password]
 labels: [bug]
-status: open
+status: FIXED - defined SCRIPT:CONCAT in framework; wired standard-options (-h/-v/-V)
 ---
 
 # `new-password`: undefined `concat`/`concatf` at runtime

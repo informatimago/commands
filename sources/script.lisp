@@ -469,6 +469,24 @@ to create parents directories if they don't exist.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; CONCAT is exported (see packages.lisp) and used by commands such as
+;; new-password.  Define it here unless it is already provided (e.g. by a
+;; cesarum package this one uses).
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (fboundp 'concat)
+    (defun concat (&rest string-designators)
+      "Concatenate the STRING-DESIGNATORS (strings, characters, symbols,
+numbers) into a single fresh string."
+      (apply (function concatenate) 'string
+             (mapcar (lambda (item)
+                       (typecase item
+                         (string    item)
+                         (character (string item))
+                         (null      "")
+                         (symbol    (string item))
+                         (t         (princ-to-string item))))
+                     string-designators)))))
+
 (defun perror (format-string &rest args)
   "
 DO:     Writes a message on the error output in the name of the script.
@@ -952,6 +970,34 @@ RETURN:     The lisp-name of the option (this is a symbol
                         (option-arguments option)
                         (option-documentation option)))
               (format t "~@[~A~%~]" (command-documentation *command*))))))
+
+(defun version-option ()
+  "Returns the standard --version option, which prints the program name
+and *PROGRAM-VERSION* and exits successfully.  Include it in every
+command's option list together with (HELP-OPTION) and (VERBOSE-OPTION)."
+  (option ("version" "-V" "--version") ()
+          "Print the version of this command and exit."
+          (format t "~A version ~A~%" *program-name* *program-version*)
+          (finish-output)
+          (exit ex-ok)))
+
+(defun verbose-option ()
+  "Returns the standard --verbose option, which sets SCRIPT:*VERBOSE* so
+that the command may produce additional output on *ERROR-OUTPUT*.
+Include it in every command's option list together with (HELP-OPTION)
+and (VERSION-OPTION)."
+  (option ("verbose" "-v" "--verbose") ()
+          "Produce verbose output."
+          (setf *verbose* t)))
+
+(defun standard-options ()
+  "Returns the list of the three standard options every command should
+accept: (HELP-OPTION) (VERSION-OPTION) (VERBOSE-OPTION).  Splice it into
+an OPTIONS form, e.g.:
+    (options \"foo\" (list* (standard-options) (list (option ...) ...)))
+or simply
+    (options \"foo\" (standard-options) (option ...) ...)"
+  (list (help-option) (version-option) (verbose-option)))
 
 (defun completion-option-prefix (command prefix)
   (dolist (key (remove-if-not (lambda (key)

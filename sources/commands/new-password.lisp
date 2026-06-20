@@ -97,7 +97,7 @@ in their passwords:
          ;;   password generation."  (build-trigram-index
          ;;   thesaurus-pathname *index-pathname*))
 
-         (help-option)
+         (standard-options)
          (bash-completion-options))
 
 

@@ -164,7 +164,7 @@
                  "Specifies the path of the left output file."
                  (setf *left-path* path))
 
-         (option ("right" "-l" "--right") (path)
+         (option ("right" "-r" "--right") (path)
                  "Specifies the path of the right output file."
                  (setf *right-path* path))
 

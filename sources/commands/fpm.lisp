@@ -297,8 +297,8 @@ underlying package system syntax.
 
 ;;;---------------------------------------------------------------------
 
-(defvar *verbose* nil
-  "Whether the underlying commands run should be written to stdout.")
+;; *VERBOSE* is provided (and exported) by the SCRIPT framework; this file
+;; is in the SCRIPT package, so we reuse it rather than redefining it.
 
 (defun print-command (command)
   (when *verbose*
@@ -944,9 +944,7 @@ or an expression such as (= <package>)  (<= <package>) etc."))
              (make-instance pms))
             (t
              (make-instance 'unimplemented-pms :package-management-system pms)))))
-  (parse-options *command* arguments)
-  (error "Not implemented yet.")
-  ex-usage)
+  (parse-options *command* arguments))
 
 ;;;------------------------------------------------------------
 #-(and)
