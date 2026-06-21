@@ -1120,7 +1120,9 @@ COMMAND on *standard-output*, through the pager."
 (defun help-option ()
   (option ("help" "-h" "--help") ()
           "Give this help."
-          (print-command-help *command*)))
+          (print-command-help *command*)
+          (finish-output)
+          (exit ex-ok)))
 
 (defun version-option ()
   "Returns the standard --version option, which prints the program name

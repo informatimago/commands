@@ -328,7 +328,7 @@ and read-from-string
                            (format t "There is no emacs server~%")
                            (exit ex-unavailable))
                          (progn
-                           (call-option-function *command* "help" '())
+                           (print-command-help)
                            (exit ex-noinput)))))
     ex-ok))
 

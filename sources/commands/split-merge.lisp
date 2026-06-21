@@ -192,14 +192,14 @@
 (defun main (arguments)
   (parse-options *command* arguments
                  (lambda ()
-                   (call-option-function *command* "help" '())
+                   (print-command-help)
                    (exit ex-usage))
                  (lambda (input-path arguments)
                    (setf *input-path* input-path)
                    arguments))
   (unless *input-path*
     ;; No input file given (e.g. only --help or no arguments): show usage.
-    (call-option-function *command* "help" '())
+    (print-command-help)
     (exit ex-usage))
   (split-merge-file *input-path* *left-path* *right-path*)
   ex-ok)

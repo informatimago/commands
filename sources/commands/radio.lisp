@@ -211,7 +211,7 @@ Signals an error if they exit with an error status or are killed by a signal."
 (defun main (arguments)
   (setf *debug* nil)
   (parse-options *command* arguments
-                 (lambda () (call-option-function *command* "help" '()))
+                 (lambda () (print-command-help) (exit ex-ok))
                  (lambda (name arguments)
                      (let* ((radio (get-radio-station name)))
                        (if radio
