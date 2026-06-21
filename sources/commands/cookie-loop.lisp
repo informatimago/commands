@@ -26,8 +26,10 @@
   (finish-output)
   (string= "" (string-trim #(#\space #\tab) (read-line))))
 
+(options "cookie-loop" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (loop
     :do (clear)
         (run-program "cookie")
