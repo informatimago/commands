@@ -54,6 +54,17 @@ command exercised.  Findings:
   build loads all 64 commands with 0 failures.  They remain smells to clean up
   but are not currently build-breaking here; re-verify on the target platform.
 
+- **`svn-locate-revision` — FIXED (commit).** A new instance not previously
+  listed: `svn-locate-revision.lisp:43` did `(defparameter *verbose* t)` at top
+  level.  Because the file was `(in-package "SCRIPT")`, this mutated the **shared**
+  framework special `SCRIPT:*PROGRAM-VERSION*`'s sibling `*VERBOSE*` to T at build
+  time, so the saved image had verbose output turned on for **every** command
+  (confirmed: `*verbose*` was T in the core; commands printed `;`-trace lines
+  with no `-v`).  Removed the load-time form (and the redundant `(in-package
+  "SCRIPT")`, and fixed its won't-dispatch `:main`); `*verbose*` is NIL again.
+  This is the second concrete instance (after `columnify`) of load-time forms
+  causing real, cross-command misbehaviour — strong support for this epic.
+
 ## Acceptance criteria
 
 - Loading the dispatcher image performs no I/O, no subprocess calls, no
