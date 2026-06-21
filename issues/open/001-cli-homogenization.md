@@ -4,7 +4,7 @@ title: Homogenize CLI options (-h/--help, -v/--verbose, -V/--version)
 severity: high
 commands: []
 labels: [epic, cli, enhancement]
-status: in-progress - helpers VERSION-OPTION/VERBOSE-OPTION/STANDARD-OPTIONS added+exported; wired into new-password/mfod/one-of/religion/ansi-test; remaining commands TODO (blocked partly on issue 006)
+status: in-progress - framework done (006 fixed, help-option exits); 34/64 built commands now expose -h/-v/-V; remaining are mostly commands with their own fix issue, plus a handful of ad-hoc-parser migrations
 ---
 
 # Homogenize CLI options (-h/--help, -v/--verbose, -V/--version)
@@ -84,3 +84,40 @@ This epic depends on nothing and unblocks most other cleanups. Commands that use
 ad-hoc `(member "-h" arguments)` should migrate to `parse-options`; the few pure
 filters (`downcase`, `lrev`, `revlines`, `columnify`) can keep reading stdin but
 must still recognize `-h/-v/-V` before doing so.
+
+## Progress (build-verified)
+
+Framework is complete:
+- `version-option`/`verbose-option`/`standard-options` added and exported; `006`
+  fixed so `-V` reports the dispatched command's own version.
+- `help-option` now prints help and **exits `ex-ok`** (was: printed and fell
+  through, which would hang any stdin filter after `--help`). The three
+  programmatic help callers (`split-merge`, `mfod`, `radio`) switched to
+  `print-command-help` so they keep their own exit codes.
+
+**34 / 64 built commands** now expose the full `-h/-v/-V` trio (was 11):
+ansi-test, dedup, fpm, mfod, new-password, one-of, radio, religion,
+remove-duplicate-files, split-merge (pre-existing/earlier), plus the homogenized
+batch: buzzword, diss, entropy, programmer, nls, capitalize, downcase,
+departement, insulte, random, lrev, revlines, add-cookie, add-paths,
+batch-emerge, extend-identifiers, get-directory, group-files, merge, pjb-diff,
+pseudo-pop, sleep-schedule, macosx-port-uninstall-recursively.
+
+Pattern used: add `(options "<name>" (standard-options))` and call
+`parse-options` at the top of `main` (collecting positional operands via the
+undefined-argument handler for commands that take arguments). Also fixed
+`merge`, which was un-dispatchable (single-colon `:main` to a non-exported
+`MAIN`).
+
+### Remaining (still missing the trio)
+
+- **Have their own fix issue — homogenize there:** cddb-to-tag (030),
+  check-surface (031), clean-bd-archive (013), cookie-diff (023),
+  edit-comments-of-ogg (044), hexbin (043), html-make-image-index (040), lc
+  (041), menu (011), pic-resize (033), rstuml (034), split-dir (035),
+  substitute (036), surveille-host (037), surveille-web-pages (014),
+  svn-locate-revision (015), text (042).
+- **Ad-hoc `-h` parsers to migrate (no dedicated issue):** bin-to-c-array,
+  clean-name, llen, when, commands, cookie, cookie-loop, cookie-merge.
+- **Misc (no dedicated issue):** clar, rotate (manual `-V` in `main`), columnify,
+  kwic (filters), memo (own option DSL), script-test.

@@ -91,8 +91,10 @@ takes precedence, then a probe of the controlling terminal with stty(1)."
                   :finally (format t "~%")))))))
 
 
+(options "columnify" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (columnify (loop
                :for line = (read-line *standard-input* nil nil)
                :while line :collect line)

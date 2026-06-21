@@ -13,8 +13,10 @@
 
 ;;;;--------------------------------------------------------------------
 
+(options "script-test" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   ;; (apropos "*" "UIOP")
   ;; (print uiop:*COMMAND-LINE-ARGUMENTS*)
 

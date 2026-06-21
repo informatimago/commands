@@ -43,6 +43,8 @@
 (command :use-systems (:cl-ppcre)
          :version "0.1.2")
 
+(options "clar" (standard-options))
+
 (defun match (regexp string)
   (let* ((scanner (cl-ppcre:create-scanner regexp :extended-mode t))
          (results (multiple-value-list (cl-ppcre:scan scanner string))))
@@ -144,24 +146,28 @@
   (format t "~T~T# split out several sources from a single file.~2%"))
 
 
-(defun main (files)
-  (handler-case
-      (cond
-        ((null files)
-         (usage)
-         ex-usage)
-        ((some (lambda (file) (or (zerop (length file))
-                                  (char= #\- (aref file 0)))) files)
-         (usage)
-         ex-usage)
-        ((null (rest files))
-         (split (first files))
-         ex-ok)
-        (t
-         (join (first files) (rest files))
-         ex-ok))
-    (error (err)
-      (format t "~A: ~A~%" *program-name* err)
-      ex-software)))
+(defun main (arguments)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((files (nreverse operands)))
+      (handler-case
+          (cond
+            ((null files)
+             (usage)
+             ex-usage)
+            ((some (lambda (file) (or (zerop (length file))
+                                      (char= #\- (aref file 0)))) files)
+             (usage)
+             ex-usage)
+            ((null (rest files))
+             (split (first files))
+             ex-ok)
+            (t
+             (join (first files) (rest files))
+             ex-ok))
+        (error (err)
+          (format t "~A: ~A~%" *program-name* err)
+          ex-software)))))
 
 ;;;; THE END ;;;;

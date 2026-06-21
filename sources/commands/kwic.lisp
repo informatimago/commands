@@ -52,8 +52,10 @@
 
 (test/wl-lessp)
 
+(options "kwic" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (dolist (line (sort
                  (mapcan (lambda (line)
                            (loop
