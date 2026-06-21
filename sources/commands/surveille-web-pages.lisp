@@ -50,19 +50,15 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;****************************************************************************
 
-(in-package "SCRIPT")
-(command :use-systems (:babel))
+(command :use-systems (:babel :md5)
+         :version "1.0.1"
+         :documentation "
+Send email notifications when the checksum of watched web pages changes.
 
-(defun make-pipe-input-stream  (command &key (external-format :default)
-                                          (element-type 'character))
-  (declare (ignore command external-format element-type))
-  (error "Not implemented yet."))
-
-(defun make-pipe-output-stream (command &key (external-format :default)
-                                          (element-type 'character))
-  (declare (ignore command external-format element-type))
-  (error "Not implemented yet."))
-
+For each task in ~/SURVEILLE-WEB.DATA, fetch its resources, compare their md5
+checksums against the stored ones, and email a MIME notice to the task's
+recipients listing the resources whose content changed.  Meant to be run from
+cron; takes no arguments.")
 
 (defun ensure-list (item)  (if (listp item) item (list item)))
 
@@ -83,19 +79,16 @@
   #-clisp :utf-8)
 
 (defun data-mime-type (data)
-  (unwind-protect
-       (progn
-         #+clisp (setf custom:*default-file-encoding* *encoding-iso-8859-1*)
-         (multiple-value-bind (io in out) (uiop:run-program
-                                           (list "file" "-ib" "-")
-                                           :input :stream
-                                           :output :stream
-                                           :wait nil)
-           (close io)
-           (ignore-errors
-            (write-sequence (babel:octets-to-string data :encoding *encoding-iso-8859-1*) out))
-           (close out)
-           (prog1 (read-line in) (close in))))))
+  "Return the MIME type of the octet vector DATA, as reported by file(1).
+DATA is fed to `file -ib -' on stdin (preserved byte for byte through an
+ISO-8859-1 round trip)."
+  (string-trim '(#\Space #\Newline #\Return)
+               (uiop:run-program (list "file" "-ib" "-")
+                                 :input (make-string-input-stream
+                                         (babel:octets-to-string data :encoding *encoding-iso-8859-1*))
+                                 :output :string
+                                 :external-format *encoding-iso-8859-1*
+                                 :ignore-error-status t)))
 
 (defun write-base64-sequence (sequence
                               &optional (*standard-output* *standard-output*))
@@ -165,11 +158,12 @@
 (defun compute-checksum (resource)
   (ecase (resource-kind resource)
     ((:page)
+     ;; RESOURCE-DATA is the list of text lines; join them and md5 their
+     ;; UTF-8 octets.
      (md5:md5sum-sequence
-      (coerce (babel:octets-to-string
-               (apply (function concatenate) 'string  (resource-data resource))
-               :encoding :utf-8)
-              '(simple-array (unsigned-byte 8) (*)))))
+      (babel:string-to-octets
+       (apply (function concatenate) 'string (resource-data resource))
+       :encoding :utf-8)))
     ((:data)
      (md5:md5sum-sequence
       (coerce (resource-data resource)
@@ -180,39 +174,37 @@
   (setf (resource-data resource)
         (ecase  (resource-kind resource)
           ((:page)
-           (with-open-stream (in (make-pipe-input-stream
-                                  (format nil "/usr/local/bin/lynx -dump ~S"
-                                          (resource-uri resource))))
-             (loop for line = (read-line in nil nil)
-                while line
-                collect line)))
+           ;; lynx -dump renders the page to text; collect it line by line.
+           (with-input-from-string
+               (in (uiop:run-program (list "lynx" "-dump" (resource-uri resource))
+                                     :output :string
+                                     :ignore-error-status t))
+             (loop :for line = (read-line in nil nil)
+                   :while line
+                   :collect line)))
           ((:data)
-           (with-open-stream  (in (make-pipe-input-stream
-                                   (format nil "/usr/local/bin/wget ~S -o /dev/null -O /dev/stdout"
-                                           (resource-uri resource))
-                                   :element-type '(unsigned-byte 8)))
-             (loop
-                :with buffer = (make-array 8 :adjustable t :fill-pointer 0)
-                :for byte = (read-byte in nil nil)
-                :while byte
-                :do (vector-push-extend byte buffer (length buffer))
-                :finally (return buffer)))))))
+           ;; wget the raw bytes to stdout; capture them through an ISO-8859-1
+           ;; round trip (each octet <-> one character) so the data is exact.
+           (let ((latin1 (uiop:run-program (list "wget" (resource-uri resource)
+                                                 "-q" "-O" "-")
+                                           :output :string
+                                           :external-format *encoding-iso-8859-1*
+                                           :ignore-error-status t)))
+             (map '(simple-array (unsigned-byte 8) (*))
+                  (function char-code) latin1))))))
 
 (defun send-notice (task changes)
-  (with-open-stream (msg (make-pipe-output-stream
-                          (format nil "/usr/sbin/sendmail ~{~S ~}"
-                                  (mapcar (function recipient-address)
-                                          (task-recipients task)))
-                          :external-format *encoding-utf-8*))
-    (let ((boundary
+  (let ((message
+          (with-output-to-string (msg)
+            (let ((boundary
            (multiple-value-bind (se mi ho da mo ye)
                (decode-universal-time (get-universal-time))
              (format nil "~A-~8,'0X-~4,'0D~2,'0D~2,'0D~2,'0D~2,'0D~2,'0D"
                      (with-input-from-string
                          (in (uiop:run-program "hostname -f"
                                                :output :string
-                                               :wait nil
-                                               :force-shell t))
+                                               :force-shell t
+                                               :ignore-error-status t))
                        (read-line in))
                      (random #.(expt 2 32))
                      ye mo da ho mi se))))
@@ -250,11 +242,23 @@
           (format msg "Content-Type: text/plain; charset=utf-8~%")
           (format msg "Content-Disposition: inline~%")
           (format msg "~%~A~2%" (resource-title resource))))
-      (format msg "~2%--~A--~%" boundary))))
+      (format msg "~2%--~A--~%" boundary)))))
+    (uiop:run-program (list* "/usr/sbin/sendmail"
+                             (mapcar (function recipient-address)
+                                     (task-recipients task)))
+                      :input (make-string-input-stream message)
+                      :external-format *encoding-utf-8*
+                      :ignore-error-status t)))
 
-(defun main (args)
-  (let ((verbosep (member "-v" args :test (function string=)))
-        (tasks (load-tasks +task-file+)))
+(options "surveille-web-pages" (standard-options))
+
+(defun main (arguments)
+  (parse-options *command* arguments)
+  (unless (probe-file +task-file+)
+    (format *error-output* "~A: no task file ~A~%"
+            *program-name* (namestring +task-file+))
+    (return-from main ex-noinput))
+  (let ((tasks (load-tasks +task-file+)))
     ;; The probability for two users to check the same page is low.
     (dolist (task tasks)
       (let ((changes '()))
@@ -264,7 +268,7 @@
             (unless (equalp new-checksum (resource-checksum resource))
               (setf (resource-checksum resource) new-checksum)
               (push resource changes))))
-        (when verbosep
+        (when *verbose*
           (format t "~&~A: got ~A changes:~{~%    ~A~}~%"
                   (task-title task)
                   (length changes)
