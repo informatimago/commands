@@ -13,81 +13,37 @@
     :while line
     :do (format t "~D ~A~%" (length line) line)))
 
-(defun process-arguments (argv options &key (standard-input t))
-  (flet ((input-files (argv)
-           (cond
-             (argv
-              (let ((files argv))
-                (lambda ()
-                  (cond
-                    ((null files)
-                     nil)
-                    ((and standard-input (string= (first files) "-"))
-                     (pop files)
-                     *standard-input*)
-                    ((open (pop files)))))))
-             (standard-input
-              (let ((given nil))
-                (lambda ()
-                  (if given
-                      nil
-                      (progn
-                        (setf given t)
-                        *standard-input*)))))
-             (t
-              (constantly nil))))
-         (optionp (arg options)
-           (find-if (lambda (option)
-                      (cond
-                        ((atom option)         (string= arg option))
-                        ((atom (first option)) (string= arg (first option)))
-                        ((member arg (first option) :test (function string=)))))
-                    options))
-         (option-canonical (option)
-           (cond
-             ((atom option)          option)
-             ((atom (first option)) (first option))
-             (t                     (first (first option)))))
-         (option-argument-count (option)
-           (if (atom option)
-               0
-               (or (second option) 0))))
-    (loop
-      :with arguments := '()
-      :with option
-      :while argv
-      :do (cond ((string= "--" (first argv))
-                 (pop argv)
-                 (loop-finish))
-                ((and (<= 1 (length (first argv)))
-                      (char= #\- (aref (first argv) 0))
-                      (setf option (optionp (first argv) options)))
-                 (let ((argument (pop argv)))
-                   (push (cons (option-canonical option)
-                               (if (<= (option-argument-count option) (length argv))
-                                   (loop :repeat (option-argument-count option)
-                                         :collect (pop argv))
-                                   (error "Missing arguments after option ~S" argument)))
-                         arguments)))
-                (t
-                 (loop-finish)))
-      :finally (return (values (nreverse arguments)
-                               (input-files argv))))))
+(defun input-files (operands &key (standard-input t))
+  "Return a generator (a function of no arguments) that yields successive
+input streams for the file OPERANDS (\"-\" denotes *STANDARD-INPUT*), or
+*STANDARD-INPUT* once when OPERANDS is empty and STANDARD-INPUT is true."
+  (cond
+    (operands
+     (let ((files operands))
+       (lambda ()
+         (cond
+           ((null files) nil)
+           ((and standard-input (string= (first files) "-")) (pop files) *standard-input*)
+           ((open (pop files)))))))
+    (standard-input
+     (let ((given nil))
+       (lambda ()
+         (if given
+             nil
+             (progn (setf given t) *standard-input*)))))
+    (t
+     (constantly nil))))
 
-(defun main (argv)
-  (let ((meta-options  '(((:help      "-h"  "--help")))))
-    (multiple-value-bind (options files)
-        (process-arguments argv
-                           meta-options
-                           :standard-input t)
-      (when (member '(:help) options :test (function equal))
-        (loop :for option :in meta-options
-                :initially (format t "~A usage:~2%    ~:*~A {option} [--] {file}~2%" *program-name*)
-              :do (destructuring-bind ((ignore &rest options) &optional typep) option
-                    (declare (ignore ignore typep))
-                    (format t "         ~{~A~^|~}~%" options))
-              :finally (terpri))
-        (return-from main))
+(options "llen" (standard-options))
+
+(defun main (arguments)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest)
+                     (if (string= arg "--")
+                         (progn (setf operands (revappend rest operands)) '())
+                         (progn (push arg operands) rest))))
+    (let ((files (input-files (nreverse operands) :standard-input t)))
       (loop
         :for stream := (funcall files)
         :while stream
