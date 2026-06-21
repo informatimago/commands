@@ -172,13 +172,19 @@
        (let ((numero (format nil "~2,'0D" (parse-integer numero))))
          (find numero *departements* :key (function first) :test (function string-equal))))))
 
+(options "departement" (standard-options))
+
 (defun main (numeros)
-  (format t "~:{~3A ~A~%~
-             ~@[    Préfecture:       ~A.~%~]~
-             ~@[    Sous-préfectures: ~{~A~^, ~}.~%~]~
-             ~:*~:[~@[    ~A.~%~]~;~@[    Région:           ~A.~%~]~]~}"
-          (remove nil (mapcar (function departement) numeros)))
-  ex-ok)
+  (let ((operands '()))
+    (parse-options *command* numeros nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((numeros (nreverse operands)))
+      (format t "~:{~3A ~A~%~
+                 ~@[    Préfecture:       ~A.~%~]~
+                 ~@[    Sous-préfectures: ~{~A~^, ~}.~%~]~
+                 ~:*~:[~@[    ~A.~%~]~;~@[    Région:           ~A.~%~]~]~}"
+              (remove nil (mapcar (function departement) numeros)))
+      ex-ok)))
 
 
 ;; ISO 3166-2:FR

@@ -34,7 +34,7 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :main "COM.INFORMATIMAGO.COMMAND.MERGE:MAIN")
+(command :main "COM.INFORMATIMAGO.COMMAND.MERGE::MAIN")
 
 
 (defpackage "COM.INFORMATIMAGO.COMMAND.MERGE"
@@ -117,11 +117,17 @@ RETURN: VECTOR
                            (function string<=) :key (function file-line)))
                  (vpop files))))))
 
+(options "merge" (standard-options))
+
 (defun main (arguments)
-  (if arguments
-      (progn
-        (merge arguments)
-        ex-ok)
-      ex-noinput))
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (if arguments
+          (progn
+            (merge arguments)
+            ex-ok)
+          ex-noinput))))
 
 ;;;; THE END ;;;;

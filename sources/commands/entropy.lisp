@@ -38,8 +38,10 @@
 ;;     p = 1.0 * count / total
 ;;     entropy -= p * math.log(p, 256)
 
+(options "entropy" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (format t "~A~%" (multiple-value-call (function entropy)
                      (byte-histogram *standard-input*)))
   ex-ok)

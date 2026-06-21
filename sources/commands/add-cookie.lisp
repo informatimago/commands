@@ -38,7 +38,13 @@
 
 (defparameter *cookie-file* "/data/cookies/bopcs.cookies")
 
+(options "add-cookie" (standard-options))
+
 (defun main (arguments)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
 
   (case (length arguments)
     ((0))
@@ -62,6 +68,6 @@
           :finally  (format out "~%#~%")))
     (error (err) (format t "~%~A~%" err)))
 
-  ex-ok)
+  ex-ok)))
 
 ;;;; THE END ;;;;

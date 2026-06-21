@@ -70,8 +70,10 @@ SEPARATORS:     A sequence containing the characters on which to split the words
 
 (defun one-of (s) (elt s (random (length s))))
 
+(options "diss" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (setf *random-state* (make-random-state t))
   (fmt (one-of #(
                  "You’ve baked a really lovely cake, but then you’ve used dog sh!t for frosting."

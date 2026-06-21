@@ -32,7 +32,9 @@
                    (destructuring-bind (cut num . nam) item
                      (format t "~A~%" (if (= 1 num) nam cut))))))))
 
+(options "nls" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (nls)
   ex-ok)

@@ -52,7 +52,13 @@ RETURN:  the list of lines collected from the file.
        :do (push line (gethash (line-key line) index '())))
     index))
 
+(script:options "pjb-diff" (standard-options))
+
 (defun main (args)
+  (let ((operands '()))
+    (parse-options *command* args nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((args (nreverse operands)))
   (destructuring-bind (left right) args
     (let* ((lfile (load-file left))
            (rfile  (load-file right))
@@ -68,6 +74,6 @@ RETURN:  the list of lines collected from the file.
                            (line-number line)
                            (file-path rfile)
                            (line-text line)))
-               (setf num (line-number line)))))))
+               (setf num (line-number line)))))))))
 
 ;;;; THE END ;;;;

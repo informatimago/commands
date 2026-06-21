@@ -1,7 +1,9 @@
 ;; -*- mode:lisp;coding:utf-8 -*-
 
+(options "buzzword" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (setf *random-state*  (make-random-state t))
   (let ((a (random 10))
         (b (random 10))

@@ -148,8 +148,10 @@ DO:     Prints a graph HEIGHT characters wide, for the whole schedule
   :x (function car) :y (function cdr)))
 ||#
 
+(options "sleep-schedule" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
 
   (setf *schedule-file* (merge-pathnames "./.sleep-schedule" (user-homedir-pathname) nil))
 

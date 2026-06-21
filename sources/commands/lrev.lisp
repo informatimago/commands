@@ -13,8 +13,10 @@
   (dolist (line lines)
     (write-line line stream)))
 
+(options "lrev" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (barf (reverse (slurp *standard-input*)) *standard-output*)
   ex-ok)
 

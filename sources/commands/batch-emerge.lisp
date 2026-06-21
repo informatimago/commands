@@ -1,8 +1,10 @@
 ;; -*- mode:lisp;coding:utf-8 -*-
 
 ;; emerge all the packages specified in /home/pjb/portage-packages.txt, in batch(1).
+(options "batch-emerge" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   #-(or ccl sbcl) (error "This command can only work when compiled with ccl or sbcl.")
   #+(or ccl sbcl)
   (let ((rt (copy-readtable nil)))

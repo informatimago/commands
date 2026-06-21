@@ -30,11 +30,17 @@ NOTE:   current implementation only accepts as separators
 
 ;;;;--------------------------------------------------------------------
 
+(options "capitalize" (standard-options))
+
 (defun main (arguments)
-  (loop
-    :for arg :in arguments
-    :do (write-line (string-capitalize arg)))
-  ex-ok)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (loop
+        :for arg :in arguments
+        :do (write-line (string-capitalize arg)))
+      ex-ok)))
 
 
 ;;;; THE END ;;;;
