@@ -34,13 +34,12 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :bash-completion-hook (lambda (index words)
+(command :version "0.1.2"
+         :bash-completion-hook (lambda (index words)
                                  (if index
                                      (completion-station-prefix (elt words index))
                                      (completion-all-stations))
                                  nil))
-
-(defparameter *program-version* "0.1.2")
 
 ;;;---------------------------------------------------------------------
 

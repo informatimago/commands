@@ -40,9 +40,8 @@
 ;;;;*****************************************************************************
 (in-package "SCRIPT")
 
-(command :use-systems (:cl-ppcre))
-
-(defparameter *program-version* "0.1.2")
+(command :use-systems (:cl-ppcre)
+         :version "0.1.2")
 
 (defun match (regexp string)
   (let* ((scanner (cl-ppcre:create-scanner regexp :extended-mode t))

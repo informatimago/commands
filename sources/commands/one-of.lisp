@@ -38,9 +38,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :documentation "Prints a random selection of the arguments.")
-
-(defparameter *program-version* "0.1.2")
+(command :documentation "Prints a random selection of the arguments."
+         :version "0.1.2")
 (defvar *probability* nil)
 (defvar *count*       nil)
 (defvar *items*       '())

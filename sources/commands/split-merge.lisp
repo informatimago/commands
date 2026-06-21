@@ -34,9 +34,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :documentation "Separate a merged file with conflict into the two unmerged originals.")
-
-(defparameter *program-version* "0.1.0")
+(command :documentation "Separate a merged file with conflict into the two unmerged originals."
+         :version "0.1.0")
 
 ;;;------------------------------------------------------------------------
 

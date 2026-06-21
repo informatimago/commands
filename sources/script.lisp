@@ -671,6 +671,10 @@ RETURN: A string containing the response line.
    (documentation        :initarg  :documentation
                          :initform nil
                          :accessor command-documentation)
+   (version              :initarg  :version
+                         :initform "0.0"
+                         :accessor command-version
+                         :documentation "A string, the version of the command, bound to *PROGRAM-VERSION* while the command runs.")
    (bash-completion-hook :initarg  :bash-completion-hook
                          :initform nil
                          :accessor command-bash-completion-hook
@@ -712,7 +716,7 @@ RETURN: A string containing the response line.
   (gethash name *commands*))
 
 (defun register-command (&key name pathname use-systems use-packages shadow main
-                         documentation bash-completion-hook)
+                         documentation version bash-completion-hook)
   (setf (gethash name *commands*)
         (make-instance 'command
                        :name name
@@ -722,7 +726,8 @@ RETURN: A string containing the response line.
                        :shadow shadow
                        :main main
                        :bash-completion-hook bash-completion-hook
-                       :documentation documentation)))
+                       :documentation documentation
+                       :version (or version "0.0"))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *default-package-use-list*
@@ -755,7 +760,7 @@ RETURN: A string containing the response line.
 
 
 (defmacro command (&key name use-systems use-packages shadow main
-                   documentation bash-completion-hook)
+                   documentation version bash-completion-hook)
   "
 This macro registers a command, and is also used as a declaration:
 it's read by the command generator script, to know the systems to be
@@ -776,6 +781,11 @@ SHADOW:        a list (not evaluated) of symbol names to be shadowed.
 Run-time slots:
 
 DOCUMENTATION: a string containing the documentation of the commands.
+VERSION:       a string, the version of the command.  It is bound to
+               *PROGRAM-VERSION* while the command runs, so VERSION-OPTION
+               (-V/--version) reports the dispatched command's own version.
+               Use this instead of a load-time (defparameter *program-version* …),
+               which would clobber the single shared global in the dispatcher image.
 OPTIONS:       an expression that should return a list of clauses,
                each clause is a list of the form:
                ((option-name …) parsed-option) as returned by the
@@ -804,6 +814,7 @@ RETURN:        a new command structure.
                            :use-packages ',use-packages
                            :shadow ',shadow
                            :documentation ',documentation
+                           :version ',version
                            :bash-completion-hook ,bash-completion-hook)))))
 
 (defmacro options (command-name &rest options)
@@ -885,6 +896,7 @@ form."
               (com.informatimago.command.script:*program-name*         name)
               (com.informatimago.command.script:*default-program-name* name)
               (com.informatimago.command.script:*program-path*         pname)
+              (com.informatimago.command.script:*program-version*      (or (command-version command) "0.0"))
               (com.informatimago.command.script:*arguments*            arguments))
           (com.informatimago.command.script:exit
            (handler-case

@@ -36,9 +36,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :documentation "Generates a new random password.")
-
-(defparameter *program-version* "1.0.1")
+(command :documentation "Generates a new random password."
+         :version "1.0.1")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

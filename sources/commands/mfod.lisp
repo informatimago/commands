@@ -41,7 +41,8 @@
 
 (command :use-systems (:cl-ppcre :split-sequence)
          :use-packages ("COMMON-LISP" "SCRIPT" "SPLIT-SEQUENCE")
-         :shadow ("RUN-PROGRAM"))
+         :shadow ("RUN-PROGRAM")
+         :version "1.0.2")
 
 (defun run-program (command &rest arguments &key &allow-other-keys)
   (apply (function uiop:run-program) command arguments))
@@ -84,8 +85,6 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defparameter *program-version* "1.0.2")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

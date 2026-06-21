@@ -22,11 +22,9 @@
 
 (in-package "SCRIPT")
 
-(defparameter *program-version* "0.0.3")
-
-
 (command :name "fpm"
          :main "COMMAND.FPM:MAIN"
+         :version "0.0.3"
          :use-systems (:cl-ppcre)
          :use-packages ("COMMON-LISP" "SCRIPT")
          :shadow ("PACKAGE" "PACKAGEP" "PACKAGE-NAME")
