@@ -15,10 +15,14 @@
             ((one-of arg "-l" "--list-all-commands")
              (format t "~{~A~%~}" com.informatimago.command:*all-commands*))
 
+            ((one-of arg "-v" "--verbose")
+             (setf *verbose* t))
+
             ((one-of arg "-h" "--help")
              (format t "~%~A options:~%~
                       ~%    -h|--help                  prints this text.~
                       ~%    -V|--version               prints the version.~
+                      ~%    -v|--verbose               produce verbose output.~
                       ~%    -r|--repl                  enters a lisp REPL.~
                       ~%    -Q|--quit                  quit.~
                       ~%    -l|--list-all-commands     prints a list of all the command names.~
