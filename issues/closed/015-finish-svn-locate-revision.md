@@ -4,8 +4,28 @@ title: Finish `svn-locate-revision`: pipe-stream stubs + wrong :main package
 severity: medium
 commands: [svn-locate-revision]
 labels: [incomplete, portability]
-status: open
+status: closed
 ---
+
+## Resolution (implemented + verified)
+
+- Implemented `make-pipe-input-stream` portably **locally** in the command's own
+  package (`uiop:run-program … :output :string` served from a string stream).
+  A framework-level version was attempted but collides with
+  `surveille-web-pages`'s `(in-package "SCRIPT")` pollution (issue 014/003), so
+  it stays local for now; fold into the framework when 014 removes that
+  pollution. `make-pipe-output-stream` was unused here and dropped.
+- `:main`, the stray `(in-package "SCRIPT")`, and the load-time
+  `(defparameter *verbose* t)` were already fixed earlier (issue 005 work).
+- Added `-u/--url` (default `"."`) plus the standard `-h/-v/-V` via
+  `(options …)`/`parse-options`; revision operands collected through the
+  undefined-argument handler. `locate-revision` now uses `*url*` instead of the
+  hardcoded `"."`. Added `:version "1.0.0"` and a `:documentation`.
+
+Verified against a freshly created svn repo + working copy: `-V` prints
+`1.0.0`; `-h` lists the options and documentation; `svn-locate-revision -u <wc>
+1` runs the real svn/XML path (no more "Not implemented yet") and exits 0 with
+no mergeinfo. Build: 0 failures.
 
 # Finish `svn-locate-revision`: pipe-stream stubs + wrong :main package
 

@@ -36,20 +36,30 @@
                          "SCRIPT"
                          "XMLS"
                          "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING")
-         :main "COMMAND.SVN-LOCATE-REVISION:MAIN")
+         :main "COMMAND.SVN-LOCATE-REVISION:MAIN"
+         :version "1.0.0"
+         :documentation "Locate one or more svn revisions in the svn:mergeinfo
+properties of a branch: for each REVISION argument, print the merged branches
+where that revision comes from.  The branch to examine defaults to the current
+working copy (\".\"); use -u/--url to examine another URL.")
 
 
-(defun make-pipe-input-stream  (command &key (external-format :default)
-                                          (element-type 'character)
-                                          (buffered t))
-  (declare (ignore command external-format element-type buffered))
-  (error "Not implemented yet."))
+(defvar *url* "."
+  "The svn URL (or working copy path) whose mergeinfo is examined.")
 
-(defun make-pipe-output-stream (command &key (external-format :default)
-                                          (element-type 'character)
-                                          (buffered t))
-  (declare (ignore command external-format element-type buffered))
-  (error "Not implemented yet."))
+
+(defun make-pipe-input-stream (command &key (external-format :default)
+                                            (element-type 'character)
+                                            buffered)
+  "Run COMMAND (a shell command string) and return an INPUT stream on its
+standard output.  The output is captured fully and served from memory, which
+is portable across Common Lisp implementations.  BUFFERED is ignored."
+  (declare (ignore element-type buffered))
+  (make-string-input-stream
+   (uiop:run-program command
+                     :output :string
+                     :external-format external-format
+                     :ignore-error-status t)))
 
 
 (defun candidate-branches (url revision)
@@ -154,16 +164,26 @@ If it does, then return a list of merged branches where this revision come from.
 
 
 
+(options "svn-locate-revision"
+         (standard-options)
+         (option ("url" "-u" "--url") (url)
+                 "The svn URL (or working-copy path) to examine (default: \".\")."
+                 (setf *url* url)))
+
 (defun main (arguments)
-  (loop
-    :for srevision :in arguments
-    :for revision = (parse-integer srevision :junk-allowed t
-                                             :start (if (and (plusp (length srevision))
-                                                             (eql #\r (aref srevision 0)))
-                                                        1
-                                                        0))
-    :when revision
-      :do (map nil (function write-line) (locate-revision "." revision)))
+  (setf *url* ".")
+  (let ((revisions '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg revisions) rest))
+    (loop
+      :for srevision :in (nreverse revisions)
+      :for revision = (parse-integer srevision :junk-allowed t
+                                               :start (if (and (plusp (length srevision))
+                                                               (eql #\r (aref srevision 0)))
+                                                          1
+                                                          0))
+      :when revision
+        :do (map nil (function write-line) (locate-revision *url* revision))))
   ex-ok)
 
 ;;;; THE END ;;;;
