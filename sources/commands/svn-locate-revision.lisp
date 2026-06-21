@@ -31,16 +31,12 @@
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package "SCRIPT")
-
 (command :use-systems (:xmls :com.informatimago.common-lisp.cesarum)
          :use-packages ( "COMMON-LISP"
                          "SCRIPT"
                          "XMLS"
                          "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.STRING")
-         :main "SVN-LOCATE-REVISION:MAIN")
-
-(defparameter *verbose* t)
+         :main "COMMAND.SVN-LOCATE-REVISION:MAIN")
 
 
 (defun make-pipe-input-stream  (command &key (external-format :default)
