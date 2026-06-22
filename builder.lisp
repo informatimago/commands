@@ -94,7 +94,7 @@
 
 (defparameter *all-commands*
   '("add-cookie" "add-paths" "ansi-test" "batch-emerge"
-    "bin-to-c-array" "buzzword" "capitalize"
+    "bin-to-c-array" "box" "buzzword" "capitalize"
     "cddb-to-tag" "check-surface" "clar"
     "clean-bd-archive" "clean-name" ;; "clean-paths"
     "commands"
@@ -117,7 +117,7 @@
     "split-merge" "substitute" "surveille-host"
     "surveille-web-pages" "svn-locate-revision" "text"
     "when")
-  #-(and) '("box" "shell"))
+  #-(and) '("shell"))
 
 (dolist (name *all-commands*)
   (ignore-errors (delete-package (command-package-name name))))
