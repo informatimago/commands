@@ -468,6 +468,158 @@ to create parents directories if they don't exist.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Trash directory and safe file disposal.
+;;;
+;;;  Commands that remove files (dedup, remove-duplicate-files, ...) should not
+;;;  delete them outright: by default they move them to a Trash directory.  The
+;;;  helpers below locate the Trash (the macOS system Trash, or an XDG-based
+;;;  default, or a user-supplied directory), move a file there without
+;;;  clobbering a homonym, and empty a (non-system) Trash.
+;;;
+
+(defvar *dry-run* nil
+  "When true, duplicate-removal commands only report what they would remove.")
+(defvar *use-trash* t
+  "When true (the default), removed files are moved to the Trash; when false
+they are deleted permanently.")
+(defvar *trash-directory* nil
+  "When non-NIL, the user-supplied Trash directory (namestring or pathname);
+when NIL, (DEFAULT-TRASH-DIRECTORY) is used.")
+(defvar *empty-trash-requested* nil
+  "When true, the command empties the Trash and exits instead of removing
+duplicates.")
+
+(defun pathname-as-directory (path)
+  "Coerces PATH (a namestring or pathname) to a directory pathname, ensuring a
+trailing slash so that it denotes a directory rather than a file."
+  (let ((namestring (namestring path)))
+    (if (and (plusp (length namestring))
+             (char= #\/ (char namestring (1- (length namestring)))))
+        (pathname namestring)
+        (pathname (concatenate 'string namestring "/")))))
+
+(defun xdg-data-home ()
+  "Returns the XDG data home directory as a pathname: $XDG_DATA_HOME when set,
+otherwise ~/.local/share/."
+  (let ((xdg (getenv "XDG_DATA_HOME")))
+    (if (and xdg (plusp (length xdg)))
+        (pathname-as-directory xdg)
+        (merge-pathnames #P".local/share/" (user-homedir-pathname)))))
+
+(defun system-trash-directory ()
+  "Returns the operating-system Trash directory as a pathname when there is a
+well-known one (currently macOS ~/.Trash/), or NIL otherwise."
+  (when (eq (uname) :darwin)
+    (merge-pathnames #P".Trash/" (user-homedir-pathname))))
+
+(defun default-trash-directory ()
+  "Returns the default Trash directory: the system Trash when there is one
+(macOS), otherwise the XDG location $XDG_DATA_HOME/Trash/files/."
+  (or (system-trash-directory)
+      (merge-pathnames #P"Trash/files/" (xdg-data-home))))
+
+(defun system-trash-p (directory)
+  "Whether DIRECTORY denotes the operating-system Trash (which EMPTY-TRASH
+refuses to empty)."
+  (let ((system (system-trash-directory)))
+    (and system
+         (string= (namestring (pathname-as-directory directory))
+                  (namestring (pathname-as-directory system))))))
+
+(defun unique-trash-target (trash-directory source)
+  "Returns a pathname inside TRASH-DIRECTORY for the file SOURCE that does not
+collide with an existing file, appending .1, .2, ... to the file name when a
+homonym is already present in the Trash."
+  (let* ((base     (pathname-as-directory trash-directory))
+         (filename (file-namestring source))
+         (target   (merge-pathnames filename base)))
+    (if (probe-file target)
+        (loop :for i :from 1
+              :for candidate = (merge-pathnames (format nil "~A.~D" filename i) base)
+              :unless (probe-file candidate)
+                :do (return candidate))
+        target)))
+
+(defun trash-file (source &key (trash-directory (default-trash-directory)) verbose)
+  "Moves the file SOURCE into TRASH-DIRECTORY, renaming it to avoid clobbering an
+existing homonym.  Creates TRASH-DIRECTORY when necessary.  Falls back to a
+copy-then-delete when SOURCE and the Trash are on different filesystems.
+Returns the destination pathname."
+  (let ((base (pathname-as-directory trash-directory)))
+    (ensure-directories-exist base)
+    (let ((target (unique-trash-target base source)))
+      (when verbose
+        (format *trace-output* "; trash ~A -> ~A~%" (namestring source) (namestring target)))
+      (handler-case
+          (rename-file source target)
+        (error ()
+          (uiop:copy-file source target)
+          (delete-file source)))
+      target)))
+
+(defun empty-trash (&key (trash-directory (default-trash-directory)) verbose)
+  "Permanently deletes the contents of TRASH-DIRECTORY.  Signals an error and
+removes nothing when TRASH-DIRECTORY is the operating-system Trash.  Returns the
+number of entries removed."
+  (when (system-trash-p trash-directory)
+    (error "Refusing to empty the system Trash ~A; use the desktop tools instead."
+           (namestring (pathname-as-directory trash-directory))))
+  (let ((base  (pathname-as-directory trash-directory))
+        (count 0))
+    (when (probe-file base)
+      (dolist (file (uiop:directory-files base))
+        (when verbose (format *trace-output* "; delete ~A~%" (namestring file)))
+        (delete-file file)
+        (incf count))
+      (dolist (dir (uiop:subdirectories base))
+        (when verbose (format *trace-output* "; delete ~A~%" (namestring dir)))
+        (uiop:delete-directory-tree dir :validate (constantly t))
+        (incf count)))
+    count))
+
+(defun dispose-of-duplicates (groups &key dry-run (trash t)
+                                          trash-directory (verbose *verbose*))
+  "GROUPS is a list of duplicate groups; each group is a non-empty list of files
+considered identical.  The FIRST file of each group is kept; the rest are
+disposed of: reported only when DRY-RUN, moved to the Trash when TRASH (the
+default), or deleted permanently when TRASH is NIL.  Returns the number of files
+disposed of."
+  (let ((trash-directory (or trash-directory (default-trash-directory)))
+        (count 0))
+    (dolist (group groups)
+      (dolist (duplicate (rest group))
+        (cond
+          (dry-run
+           (format t "~A~%" (namestring duplicate)))
+          (trash
+           (trash-file duplicate :trash-directory trash-directory :verbose verbose))
+          (t
+           (when verbose (format *trace-output* "; delete ~A~%" (namestring duplicate)))
+           (delete-file duplicate)))
+        (incf count)))
+    count))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; CONCAT is exported (see packages.lisp) and used by commands such as
+;; new-password.  Define it here unless it is already provided (e.g. by a
+;; cesarum package this one uses).
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (fboundp 'concat)
+    (defun concat (&rest string-designators)
+      "Concatenate the STRING-DESIGNATORS (strings, characters, symbols,
+numbers) into a single fresh string."
+      (apply (function concatenate) 'string
+             (mapcar (lambda (item)
+                       (typecase item
+                         (string    item)
+                         (character (string item))
+                         (null      "")
+                         (symbol    (string item))
+                         (t         (princ-to-string item))))
+                     string-designators)))))
 
 (defun perror (format-string &rest args)
   "
@@ -519,6 +671,10 @@ RETURN: A string containing the response line.
    (documentation        :initarg  :documentation
                          :initform nil
                          :accessor command-documentation)
+   (version              :initarg  :version
+                         :initform "0.0"
+                         :accessor command-version
+                         :documentation "A string, the version of the command, bound to *PROGRAM-VERSION* while the command runs.")
    (bash-completion-hook :initarg  :bash-completion-hook
                          :initform nil
                          :accessor command-bash-completion-hook
@@ -560,7 +716,7 @@ RETURN: A string containing the response line.
   (gethash name *commands*))
 
 (defun register-command (&key name pathname use-systems use-packages shadow main
-                         documentation bash-completion-hook)
+                         documentation version bash-completion-hook)
   (setf (gethash name *commands*)
         (make-instance 'command
                        :name name
@@ -570,7 +726,8 @@ RETURN: A string containing the response line.
                        :shadow shadow
                        :main main
                        :bash-completion-hook bash-completion-hook
-                       :documentation documentation)))
+                       :documentation documentation
+                       :version (or version "0.0"))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *default-package-use-list*
@@ -603,7 +760,7 @@ RETURN: A string containing the response line.
 
 
 (defmacro command (&key name use-systems use-packages shadow main
-                   documentation bash-completion-hook)
+                   documentation version bash-completion-hook)
   "
 This macro registers a command, and is also used as a declaration:
 it's read by the command generator script, to know the systems to be
@@ -624,6 +781,11 @@ SHADOW:        a list (not evaluated) of symbol names to be shadowed.
 Run-time slots:
 
 DOCUMENTATION: a string containing the documentation of the commands.
+VERSION:       a string, the version of the command.  It is bound to
+               *PROGRAM-VERSION* while the command runs, so VERSION-OPTION
+               (-V/--version) reports the dispatched command's own version.
+               Use this instead of a load-time (defparameter *program-version* …),
+               which would clobber the single shared global in the dispatcher image.
 OPTIONS:       an expression that should return a list of clauses,
                each clause is a list of the form:
                ((option-name …) parsed-option) as returned by the
@@ -652,6 +814,7 @@ RETURN:        a new command structure.
                            :use-packages ',use-packages
                            :shadow ',shadow
                            :documentation ',documentation
+                           :version ',version
                            :bash-completion-hook ,bash-completion-hook)))))
 
 (defmacro options (command-name &rest options)
@@ -733,6 +896,7 @@ form."
               (com.informatimago.command.script:*program-name*         name)
               (com.informatimago.command.script:*default-program-name* name)
               (com.informatimago.command.script:*program-path*         pname)
+              (com.informatimago.command.script:*program-version*      (or (command-version command) "0.0"))
               (com.informatimago.command.script:*arguments*            arguments))
           (com.informatimago.command.script:exit
            (handler-case
@@ -939,19 +1103,118 @@ RETURN:     The lisp-name of the option (this is a symbol
           (push key keys)))
       keys)))
 
+(defun print-command-help (&optional (command *command*))
+  "Prints the usage help (the option list and the command documentation) for
+COMMAND on *standard-output*, through the pager."
+  (with-pager ()
+    (let ((options (option-list command)))
+      (format t "~2%~A options:~2%" *program-name*)
+      (dolist (option (sort options (function string<)
+                            :key (lambda (option) (first (option-keys option)))))
+        (format t "    ~{~A~^ | ~}  ~:@(~{~A ~}~)~%~@[~{~%        ~A~}~]~2%"
+                (option-keys option)
+                (option-arguments option)
+                (option-documentation option)))
+      (format t "~@[~A~%~]" (command-documentation command)))))
+
 (defun help-option ()
   (option ("help" "-h" "--help") ()
           "Give this help."
-          (with-pager ()
-            (let ((options (option-list *command*)))
-              (format t "~2%~A options:~2%" *program-name*)
-              (dolist (option (sort options (function string<)
-                                    :key (lambda (option) (first (option-keys option)))))
-                (format t "    ~{~A~^ | ~}  ~:@(~{~A ~}~)~%~@[~{~%        ~A~}~]~2%"
-                        (option-keys option)
-                        (option-arguments option)
-                        (option-documentation option)))
-              (format t "~@[~A~%~]" (command-documentation *command*))))))
+          (print-command-help *command*)
+          (finish-output)
+          (exit ex-ok)))
+
+(defun version-option ()
+  "Returns the standard --version option, which prints the program name
+and *PROGRAM-VERSION* and exits successfully.  Include it in every
+command's option list together with (HELP-OPTION) and (VERBOSE-OPTION)."
+  (option ("version" "-V" "--version") ()
+          "Print the version of this command and exit."
+          (format t "~A version ~A~%" *program-name* *program-version*)
+          (finish-output)
+          (exit ex-ok)))
+
+(defun verbose-option ()
+  "Returns the standard --verbose option, which sets SCRIPT:*VERBOSE* so
+that the command may produce additional output on *ERROR-OUTPUT*.
+Include it in every command's option list together with (HELP-OPTION)
+and (VERSION-OPTION)."
+  (option ("verbose" "-v" "--verbose") ()
+          "Produce verbose output."
+          (setf *verbose* t)))
+
+(defun standard-options ()
+  "Returns the list of the three standard options every command should
+accept: (HELP-OPTION) (VERSION-OPTION) (VERBOSE-OPTION).  Splice it into
+an OPTIONS form, e.g.:
+    (options \"foo\" (list* (standard-options) (list (option ...) ...)))
+or simply
+    (options \"foo\" (standard-options) (option ...) ...)"
+  (list (help-option) (version-option) (verbose-option)))
+
+(defun trash-help-option ()
+  "Returns a --help option for duplicate-removal commands: like (HELP-OPTION)
+but it also reports the resolved Trash directory and exits."
+  (option ("help" "-h" "--help") ()
+          "Give this help, including where the Trash directory is."
+          (print-command-help *command*)
+          (format t "~&Trash directory: ~A~@[ (system Trash)~]~%"
+                  (namestring (pathname-as-directory
+                               (or *trash-directory* (default-trash-directory))))
+                  (system-trash-p (or *trash-directory* (default-trash-directory))))
+          (finish-output)
+          (exit ex-ok)))
+
+(defun trash-disposal-options ()
+  "Returns the list of options shared by commands that remove duplicate files:
+--dry-run, --trash, --delete and --empty-trash, plus (VERBOSE-OPTION),
+(VERSION-OPTION) and the Trash-aware (TRASH-HELP-OPTION).  They drive the
+specials *DRY-RUN*, *TRASH-DIRECTORY*, *USE-TRASH* and *EMPTY-TRASH-REQUESTED*,
+honoured by DISPOSE-DUPLICATES-COMMAND.  Splice it into an OPTIONS form."
+  (list
+   (option ("dry-run" "-n" "--dry-run") ()
+           "Do not remove anything; just list the files that would be removed."
+           (setf *dry-run* t))
+   (option ("trash" "--trash") (directory)
+           "Move removed files into DIRECTORY instead of the default Trash."
+           (setf *trash-directory* directory
+                 *use-trash*       t))
+   (option ("delete" "--delete") ()
+           "Delete duplicate files permanently instead of moving them to the Trash."
+           (setf *use-trash* nil))
+   (option ("empty-trash" "--empty-trash") ()
+           "Permanently delete the contents of the (non-system) Trash and exit."
+           (setf *empty-trash-requested* t))
+   (verbose-option)
+   (version-option)
+   (trash-help-option)))
+
+(defun dispose-duplicates-command (group-finder)
+  "Drives a duplicate-removal command.  GROUP-FINDER is a function of no
+arguments returning a list of duplicate groups (each a non-empty list of files
+whose first element is kept).  Honours the shared Trash specials set by
+TRASH-DISPOSAL-OPTIONS.  When *EMPTY-TRASH-REQUESTED*, empties the Trash and
+ignores GROUP-FINDER.  Returns an exit code."
+  (if *empty-trash-requested*
+      (handler-case
+          (let* ((directory (or *trash-directory* (default-trash-directory)))
+                 (count     (empty-trash :trash-directory directory :verbose *verbose*)))
+            (format t "~&Emptied ~D item~:P from the Trash (~A).~%"
+                    count (namestring (pathname-as-directory directory)))
+            (finish-output)
+            ex-ok)
+        (error (err)
+          (perror "~A~%" err)
+          ex-software))
+      (let ((count (dispose-of-duplicates (funcall group-finder)
+                                          :dry-run         *dry-run*
+                                          :trash           *use-trash*
+                                          :trash-directory *trash-directory*
+                                          :verbose         *verbose*)))
+        (when *verbose*
+          (format *trace-output* "; ~:[removed~;would remove~] ~D file~:P~%"
+                  *dry-run* count))
+        ex-ok)))
 
 (defun completion-option-prefix (command prefix)
   (dolist (key (remove-if-not (lambda (key)

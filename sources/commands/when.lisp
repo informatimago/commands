@@ -178,13 +178,13 @@ When usage:
 
 "))
 
+(options "when" (standard-options))
+
 (defun main (arguments)
+  (parse-options *command* arguments)
   (setf *random-state* (make-random-state t))
-  (if (or (member "-h"     arguments :test (function string-equal))
-          (member "--help" arguments :test (function string-equal)))
-      (print-usage)
-      (let ((reason (aref *reasons* (random (length *reasons*)))))
-        (format t "~%~A~2%" reason)))
+  (let ((reason (aref *reasons* (random (length *reasons*)))))
+    (format t "~%~A~2%" reason))
   (finish-output)
   ex-ok)
 

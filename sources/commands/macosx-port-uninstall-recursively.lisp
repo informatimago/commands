@@ -66,10 +66,16 @@
             (port '("uninstall")       (split-sequence:split-sequence #\space pack))))
       (port options packs))))
 
+(options "macosx-port-uninstall-recursively" (standard-options))
+
 (defun main (arguments)
-  (catch 'done
-    (port '("uninstall") arguments))
-  ex-ok)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (catch 'done
+        (port '("uninstall") arguments))
+      ex-ok)))
 
 ;;;; THE END ;;;;
 

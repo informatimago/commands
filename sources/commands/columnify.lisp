@@ -38,27 +38,34 @@
 ;;;;****************************************************************************
 
 
-(defvar *width* (or #+clisp (nth-value 1 (screen:with-window (screen:window-size screen:*window*)))
-                    (and (uiop:getenv "COLUMNS") (parse-integer (uiop:getenv "COLUMNS")))
-                    (block :found
-                      (dolist (path (list #+clisp (format nil "/proc/~D/fd/1" (posix:process-id))
-                                          "/dev/tty")
-                                    nil)
-                        (with-input-from-string (stty (uiop:run-program (format nil "stty -a < ~S" path)
-                                                                        :force-shell t
-                                                                        :input :terminal
-                                                                        :output :string
-                                                                        :wait nil))
-                          (loop
-                            :for line = (read-line stty nil nil)
-                            :while line
-                            :do (let* ((tag " columns ")
-                                       (pos (search tag line)))
-                                  (when pos
-                                    (return-from :found
-                                      (parse-integer line :start (+ pos (length tag))
-                                                          :junk-allowed t))))))))
-                    80))
+(defun terminal-width ()
+  "Returns the width of the terminal in columns, defaulting to 80.
+Computed at run time (not load time): the COLUMNS environment variable
+takes precedence, then a probe of the controlling terminal with stty(1)."
+  (or #+clisp (ignore-errors
+                (nth-value 1 (screen:with-window (screen:window-size screen:*window*))))
+      (ignore-errors
+        (and (uiop:getenv "COLUMNS") (parse-integer (uiop:getenv "COLUMNS"))))
+      (block :found
+        (dolist (path (list #+clisp (format nil "/proc/~D/fd/1" (posix:process-id))
+                            "/dev/tty")
+                      nil)
+          (ignore-errors
+            (with-input-from-string (stty (uiop:run-program (format nil "stty -a < ~S" path)
+                                                            :force-shell t
+                                                            :input nil
+                                                            :output :string
+                                                            :wait nil))
+              (loop
+                :for line = (read-line stty nil nil)
+                :while line
+                :do (let* ((tag " columns ")
+                           (pos (search tag line)))
+                      (when pos
+                        (return-from :found
+                          (parse-integer line :start (+ pos (length tag))
+                                              :junk-allowed t)))))))))
+      80))
 
 
 
@@ -84,12 +91,14 @@
                   :finally (format t "~%")))))))
 
 
+(options "columnify" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (columnify (loop
                :for line = (read-line *standard-input* nil nil)
                :while line :collect line)
-             *width*)
+             (terminal-width))
   ex-ok)
 
 ;;;; THE END ;;;;

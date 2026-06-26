@@ -201,6 +201,9 @@
   (let ((key (first argv)))
     (handler-case
         (COND
+          ((contains-option-p '("-V" "--version") key)
+           (format t "~A version ~A~%" *program-name* *program-version*))
+          ((contains-option-p '("-v" "--verbose") key) (setf *verbose* t) (print-usage))
           ((or (null argv) (contains-option-p (opts "help") key))  (print-usage))
           ((contains-option-p (opts "list")   key)     (list-memos))
           ((contains-option-p (opts "show")   key)     (show-memos))

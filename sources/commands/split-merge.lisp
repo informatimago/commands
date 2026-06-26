@@ -34,9 +34,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :documentation "Separate a merged file with conflict into the two unmerged originals.")
-
-(defparameter *program-version* "0.1.0")
+(command :documentation "Separate a merged file with conflict into the two unmerged originals."
+         :version "0.1.0")
 
 ;;;------------------------------------------------------------------------
 
@@ -152,19 +151,15 @@
 (defvar *right-path* nil)
 
 (options "split-merge"
-         (option ("version" "-V" "--version") ()
-                 "Report the version of this script."
-                 (format t "~A ~A~%" *program-name* *program-version*))
+         (version-option)
 
-         (option ("verbose" "-v" "--verbose") ()
-                 "Report writes the underlying commands that are run."
-                 (setf *verbose* t))
+         (verbose-option)
 
          (option ("left" "-l" "--left") (path)
                  "Specifies the path of the left output file."
                  (setf *left-path* path))
 
-         (option ("right" "-l" "--right") (path)
+         (option ("right" "-r" "--right") (path)
                  "Specifies the path of the right output file."
                  (setf *right-path* path))
 
@@ -197,10 +192,15 @@
 (defun main (arguments)
   (parse-options *command* arguments
                  (lambda ()
-                   (call-option-function *command* "help" '()))
+                   (print-command-help)
+                   (exit ex-usage))
                  (lambda (input-path arguments)
                    (setf *input-path* input-path)
                    arguments))
+  (unless *input-path*
+    ;; No input file given (e.g. only --help or no arguments): show usage.
+    (print-command-help)
+    (exit ex-usage))
   (split-merge-file *input-path* *left-path* *right-path*)
   ex-ok)
 

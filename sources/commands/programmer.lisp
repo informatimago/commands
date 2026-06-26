@@ -46,8 +46,10 @@
 
 (defun one-of (s) (elt s (random (length s))))
 
+(options "programmer" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (setf *random-state* (make-random-state t))
   (princ (one-of *sentences*))
   (terpri)

@@ -34,7 +34,9 @@
 ;;;;    59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ;;;;*****************************************************************************
 
-(defparameter *program-version* "0.0.0")
+(command :version "0.0.0")
+
+(options "rotate" (standard-options))
 
 
 (defun split-string (string &optional (separators " ") (remove-empty nil))
@@ -235,27 +237,27 @@ EXAMPLE:        (let* ((s #(a door a window a big hole and a bucket))
   (format t "~T~A  rotate  [-90|-180|-270|-0] < lines > columns~%" *program-name*))
 
 
-(defun main (options)
-  (handler-case
-      (cond
-        ((null options)
-         (rotate *standard-input* *standard-output* -90)
-         ex-ok)
-        ((or (member "-h" options :test (function string=))
-             (member "--help" options :test (function string=)))
-         (usage)
-         ex-ok)
-        ((cdr options)
-         (format *error-output* "~A: ~A~%" *program-name* "Too many options.")
-         (usage)
-         ex-usage)
-        (t
-         (let ((rotation (parse-integer (car options))))
-           (check-type rotation (member 0 -90 -180 -270))
-           (rotate *standard-input* *standard-output* rotation))
-         ex-ok))
-    (error (err)
-      (format *error-output* "~A: ~A~%" *program-name* err)
-      ex-software)))
+(defun main (arguments)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((options (nreverse operands)))
+      (handler-case
+          (cond
+            ((null options)
+             (rotate *standard-input* *standard-output* -90)
+             ex-ok)
+            ((cdr options)
+             (format *error-output* "~A: ~A~%" *program-name* "Too many options.")
+             (usage)
+             ex-usage)
+            (t
+             (let ((rotation (parse-integer (car options))))
+               (check-type rotation (member 0 -90 -180 -270))
+               (rotate *standard-input* *standard-output* rotation))
+             ex-ok))
+        (error (err)
+          (format *error-output* "~A: ~A~%" *program-name* err)
+          ex-software)))))
 
 ;;;; THE END ;;;;

@@ -153,28 +153,35 @@ RETURN: A string containing the character without accent
 
 ;;;;--------------------------------------------------------------------
 
-(defun main (args)
-  (let ((files    nil)
-        (names    '()))
+(defvar *list-files* '()
+  "The files named with -f/--list-file, each holding items to clean, one per line.")
 
-    (loop :while args
-          :do (let ((arg (pop args)))
-                (cond
-                  ((member arg '("-f" "--list-file") :test (function string-equal))
-                   (push (pop args) files))
-                  ((member arg '("-h" "--help")           :test (function string-equal))
-                   (print-usage)
-                   (return-from main ex-ok))
-                  ((string= arg "-" :end1 (min (length arg) 1))
-                   (error "Unknown option: ~A" arg))
-                  (t (push arg names)))))
-    (when (and (null files) (null names))
-      (print-usage)
-      (return-from main ex-usage))
-    (dolist (file files)
-      (process-items file))
-    (dolist (name names)
-      (process-name name))
-    ex-ok))
+(options "clean-name"
+         (standard-options)
+         (option ("list-file" "-f" "--list-file") (file)
+                 "Read items to clean from FILE (one per line); may be repeated."
+                 (push file *list-files*)))
+
+(defun main (arguments)
+  (setf *list-files* '())
+  (let ((names '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest)
+                     (cond
+                       ((string= arg "--")
+                        (setf names (revappend rest names)) '())
+                       ((and (plusp (length arg)) (char= #\- (char arg 0)))
+                        (error "Unknown option: ~A" arg))
+                       (t (push arg names) rest))))
+    (let ((files (nreverse *list-files*))
+          (names (nreverse names)))
+      (when (and (null files) (null names))
+        (print-usage)
+        (return-from main ex-usage))
+      (dolist (file files)
+        (process-items file))
+      (dolist (name names)
+        (process-name name))
+      ex-ok)))
 
 ;;;; THE END ;;;;

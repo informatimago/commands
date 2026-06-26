@@ -2,14 +2,14 @@
 id: 004
 title: Portability: replace clisp-only idioms & uiop:run-program misuse
 severity: high
-commands: [split-dir, surveille-host, surveille-web-pages, edit-comments-of-ogg, euronews, shell, text]
+commands: [split-dir, surveille-host, surveille-web-pages, edit-comments-of-ogg, shell, text]
 labels: [epic, portability, bug]
 status: open
 ---
 
 # Portability: replace clisp-only idioms & uiop:run-program misuse
 
-**Severity:** high  **Commands:** `split-dir`, `surveille-host`, `surveille-web-pages`, `edit-comments-of-ogg`, `euronews`, `shell`, `text`  **Labels:** epic, portability, bug
+**Severity:** high  **Commands:** `split-dir`, `surveille-host`, `surveille-web-pages`, `edit-comments-of-ogg`, `shell`, `text`  **Labels:** epic, portability, bug
 
 ## Problem
 
@@ -29,7 +29,6 @@ must read `uiop:process-info-input/-output`. Misused in:
 - `surveille-host.lisp` `notificate-state-change` (sendmail) ~118-138
 - `surveille-web-pages.lisp` `data-mime-type` ~89-98 (`(multiple-value-bind (io in out) ...)`)
 - `edit-comments-of-ogg.lisp` ~267-269, 420-432 (`:output :stream/:string :wait nil` contradiction)
-- `euronews.lisp` ~79-85
 
 ### 4c. `(= 0 (uiop:run-program ...))` for exit status
 `surveille-host.lisp:110` pings with `(= 0 (uiop:run-program "ping ..."))`.

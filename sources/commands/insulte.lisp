@@ -309,13 +309,19 @@
       (subseq ins 1)
       " !")))
 
+(options "insulte" (standard-options))
+
 (defun main (arguments)
-  (let ((shakespearp (member "shakespear" arguments :test (function equalp))))
-    (setf *random-state* (make-random-state t))
-    (princ (if shakespearp
-               (shakespear-insult)
-               (haddock-insulte)))
-    (terpri)
-    ex-ok))
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (let ((shakespearp (member "shakespear" arguments :test (function equalp))))
+        (setf *random-state* (make-random-state t))
+        (princ (if shakespearp
+                   (shakespear-insult)
+                   (haddock-insulte)))
+        (terpri)
+        ex-ok))))
 
 ;;;; THE END ;;;;

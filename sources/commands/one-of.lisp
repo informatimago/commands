@@ -38,9 +38,8 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :documentation "Prints a random selection of the arguments.")
-
-(defparameter *program-version* "0.1.2")
+(command :documentation "Prints a random selection of the arguments."
+         :version "0.1.2")
 (defvar *probability* nil)
 (defvar *count*       nil)
 (defvar *items*       '())
@@ -95,6 +94,7 @@ remaining arguments, then they're all printed in random order.
                                      count (<= count 0))
                              count)))))
 
+         (verbose-option)
          (help-option)
          (bash-completion-options))
 
@@ -121,7 +121,6 @@ remaining arguments, then they're all printed in random order.
   (setf *probability* nil
         *count*       nil
         *items*       '()
-        *debug*       t
         *random-state* (make-random-state t))
 
   (parse-options *command* arguments

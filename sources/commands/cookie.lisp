@@ -152,19 +152,34 @@
              ~&    ~:*~A [-h|--help|-l|--list-files] \\~%~
              ~&    ~VA [-f|--file cookie-file]~%" *program-name* (length *program-name*) ""))
 
-(defun main (argv)
+(defvar *list-files-requested* nil
+  "Set by -l/--list-files: list the cookie files instead of printing a cookie.")
+(defvar *cookie-file* nil
+  "Set by -f/--file: pick a cookie from this file instead of the configured files.")
+
+(options "cookie"
+         (standard-options)
+         (option ("list-files" "-l" "--list-files") ()
+                 "List the cookie files that would be used, then exit."
+                 (setf *list-files-requested* t))
+         (option ("file" "-f" "--file") (cookie-file)
+                 "Pick a cookie from COOKIE-FILE instead of the configured files."
+                 (setf *cookie-file* cookie-file)))
+
+(defun main (arguments)
+  (setf *list-files-requested* nil
+        *cookie-file*           nil)
+  (parse-options *command* arguments)
   (setf *random-state* (make-random-state t))
   (cond
-    ((starts-with-option-p '("--help" "-h") argv)
-     (usage))
-    ((starts-with-option-p '("--list-files" "-l") argv)
+    (*list-files-requested*
      (configure-cookie-files)
      (list-files))
     (t
-     (let ((file (starts-with-option-p '("--file" "-f") argv)))
+     (let ((file *cookie-file*))
        (format t "~&")
        (if file
-           (cookie-from-file (second file))
+           (cookie-from-file file)
            (progn
              (configure-cookie-files)
              (let* ((total-size 0)

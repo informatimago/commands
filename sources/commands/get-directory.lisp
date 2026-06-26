@@ -76,11 +76,17 @@ selected by KEY, and the given SUBPATH.
 
 ;;;----------------------------------------------------------------------
 
+(options "get-directory" (standard-options))
+
 (defun main (arguments)
-  (destructuring-bind (key &optional (subpath "")) arguments
-    (princ (get-directory (intern (substitute #\- #\_ key) "KEYWORD") subpath))
-    (terpri)
-    (finish-output)
-    ex-ok))
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (destructuring-bind (key &optional (subpath "")) arguments
+        (princ (get-directory (intern (substitute #\- #\_ key) "KEYWORD") subpath))
+        (terpri)
+        (finish-output)
+        ex-ok))))
 
 ;;;; THE END ;;;;

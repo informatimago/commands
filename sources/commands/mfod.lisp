@@ -41,7 +41,8 @@
 
 (command :use-systems (:cl-ppcre :split-sequence)
          :use-packages ("COMMON-LISP" "SCRIPT" "SPLIT-SEQUENCE")
-         :shadow ("RUN-PROGRAM"))
+         :shadow ("RUN-PROGRAM")
+         :version "1.0.2")
 
 (defun run-program (command &rest arguments &key &allow-other-keys)
   (apply (function uiop:run-program) command arguments))
@@ -84,8 +85,6 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defparameter *program-version* "1.0.2")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -291,6 +290,7 @@ and read-from-string
                      (t
                       (make-frame (first server) :on-terminal t)))))
 
+         (version-option)
          (help-option)
          (bash-completion-options))
 
@@ -318,13 +318,18 @@ and read-from-string
   (let ((*verbose* (and arguments (verbose-option-p arguments))))
     (setf *sockets* (emacs-socket-candidates))
     (setf *emacsen* (emacsen))
-    (if (null *emacsen*)
-        (progn
-          (format t "There is no emacs server~%")
-          ex-unavailable)
-        (parse-options *command* arguments
-                       (lambda ()
-                         (call-option-function *command* "help" '())
-                         ex-noinput)))))
+    ;; Parse the options first, so --help/--version/--verbose are honoured
+    ;; even when no emacs server is running.  With no arguments, report the
+    ;; server status (or show help when a server is available).
+    (parse-options *command* arguments
+                   (lambda ()
+                     (if (null *emacsen*)
+                         (progn
+                           (format t "There is no emacs server~%")
+                           (exit ex-unavailable))
+                         (progn
+                           (print-command-help)
+                           (exit ex-noinput)))))
+    ex-ok))
 
 ;;;; THE END ;;;;

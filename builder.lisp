@@ -94,20 +94,20 @@
 
 (defparameter *all-commands*
   '("add-cookie" "add-paths" "ansi-test" "batch-emerge"
-    "bin-to-c-array" "buzzword" "capitalize"
+    "bin-to-c-array" "box" "buzzword" "capitalize"
     "cddb-to-tag" "check-surface" "clar"
     "clean-bd-archive" "clean-name" ;; "clean-paths"
     "commands"
     "columnify" "cookie-diff" "cookie-loop"
     "cookie-merge" "cookie" "dedup"
     "departement" "diss" "downcase"
-    "edit-comments-of-ogg" "entropy" "euronews"
-    "extend-identifiers" "fetch-pop" "fpm"
+    "edit-comments-of-ogg" "entropy"
+    "extend-identifiers" "fpm"
     "get-directory" "group-files"
     "hexbin"
     "html-make-image-index" "insulte" "kwic" "lc" "llen"
     "lrev" "macosx-port-uninstall-recursively" "memo"
-    "menu" "merge" "mfod" "new-password" "news-to-mbox"
+    "menu" "merge" "mfod" "new-password"
     "nls" "one-of" "pic-resize" "pjb-diff" "programmer"
     "pseudo-pop" "radio" "random"
     "religion" "remove-duplicate-files" "revlines"
@@ -117,7 +117,7 @@
     "split-merge" "substitute" "surveille-host"
     "surveille-web-pages" "svn-locate-revision" "text"
     "when")
-  #-(and) '("box" "cpcd"  "shell"))
+  #-(and) '("shell"))
 
 (dolist (name *all-commands*)
   (ignore-errors (delete-package (command-package-name name))))

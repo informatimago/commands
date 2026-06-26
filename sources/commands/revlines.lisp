@@ -14,8 +14,10 @@
   (dolist (line lines)
     (write-line line stream)))
 
+(options "revlines" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (barf (mapcar (function reverse) (slurp *standard-input*)) *standard-output*)
   ex-ok)
 

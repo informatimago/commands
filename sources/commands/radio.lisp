@@ -34,13 +34,12 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
-(command :bash-completion-hook (lambda (index words)
+(command :version "0.1.2"
+         :bash-completion-hook (lambda (index words)
                                  (if index
                                      (completion-station-prefix (elt words index))
                                      (completion-all-stations))
                                  nil))
-
-(defparameter *program-version* "0.1.2")
 
 ;;;---------------------------------------------------------------------
 
@@ -212,7 +211,7 @@ Signals an error if they exit with an error status or are killed by a signal."
 (defun main (arguments)
   (setf *debug* nil)
   (parse-options *command* arguments
-                 (lambda () (call-option-function *command* "help" '()))
+                 (lambda () (print-command-help) (exit ex-ok))
                  (lambda (name arguments)
                      (let* ((radio (get-radio-station name)))
                        (if radio

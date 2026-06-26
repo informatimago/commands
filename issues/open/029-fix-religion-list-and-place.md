@@ -4,7 +4,7 @@ title: `religion`: `~9D` on strings crashes `-l`; duplicate `#\F` place code
 severity: medium
 commands: [religion]
 labels: [bug, data]
-status: open
+status: in-progress - FIXED ~9D->~9A, place dup F->H, removed *debug* t, added (verbose-option); TODO: fix -C copy-pasted docstring
 ---
 
 # `religion`: `~9D` on strings crashes `-l`; duplicate `#\F` place code

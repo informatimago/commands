@@ -1,82 +1,71 @@
 ;; -*- mode:lisp;coding:utf-8 -*-
 
-;; (push :debug *features*)
+(command :version "1.0.2"
+         :documentation "
+Dispose of duplicate files inside a bd-archive tree.
 
-(defparameter *program-version* "1.0.2")
+For the BASE directory argument, each of its immediate subdirectories is
+scanned and the regular files it directly contains are compared by their md5
+checksum (computed with md5sum(1)); within each group of identical files the
+first one (in directory order) is kept and the others are disposed of.  By
+default disposed files are moved to the Trash rather than deleted; see --trash,
+--delete and --empty-trash.
 
-(defvar *just-print-p* nil)
+Usage: clean-bd-archive [options] BASE")
 
-;; (defconstant +max-command-length+
-;;   #+#.(cl:if (cl:find-package :linux) '(and) '(or)) LINUX:ARG_MAX
-;;   #-#.(cl:if (cl:find-package :linux) '(and) '(or)) 4096)
-;;
-;; (defun md5sum-files (flist)
-;;   (loop
-;;      :with sumtab = (make-hash-table)   ; sums are interned
-;;      :for chunk = (and flist
-;;                        (loop
-;;                           :for size = (length "md5sum")
-;;                           :then (+ size
-;;                                    (if flist
-;;                                        (length (format nil " ~S" (first flist)))
-;;                                        0))
-;;                           :while (and flist (< size +max-command-length+))
-;;                           :collect (pop flist)))
-;;      :while chunk
-;;      :initially (format *trace-output* "~&  Checksumming...~%")
-;;      :do (format *trace-output* "~&    ~6D files...~%" (length chunk))
-;;      :do (with-open-stream (sums
-;;                             (EXT:MAKE-PIPE-INPUT-STREAM
-;;                              (format nil "md5sum~{ ~S~}"
-;;                                      (mapcar (function namestring) chunk))))
-;;            (loop
-;;               :for line = (read-line sums nil nil)
-;;               :for (sum file) = (when line
-;;                                   (with-input-from-string
-;;                                       (in (concatenate 'string "\\" line))
-;;                                     (list (read in nil nil)
-;;                                           (read-line in nil nil))))
-;;               :while sum
-;;               :do #+debug(format *trace-output* "received ~A~%" line)
-;;                    (push (string-trim " " file) (gethash sum sumtab '()))))
-;;      :finally (format *trace-output* "~&     done.~%")
-;;      :finally (return sumtab)))
+(defvar *base* nil
+  "The bd-archive base directory whose subdirectories are cleaned.")
 
-(defun md5sum-files (flist)
-  (declare (ignore flist))
-  (make-hash-table))
+(defun files-md5-groups (files)
+  "Returns the groups (lists) of FILES that share an md5 checksum, keeping only
+the groups with more than one member.  Within each group the files keep their
+order in FILES, so the first one is the one DISPOSE-OF-DUPLICATES keeps.  The
+checksums are computed by md5sum(1), invoked with the files as arguments (no
+shell), and matched back to FILES by position so that file names with spaces or
+other special characters are handled correctly."
+  (when files
+    (let ((table (make-hash-table :test 'equal))
+          (order '()))
+      (with-input-from-string
+          (out (uiop:run-program (list* "md5sum" (mapcar (function namestring) files))
+                                 :output :string
+                                 :ignore-error-status t))
+        (loop :for file :in files
+              :for line  = (read-line out nil nil)
+              :while line
+              :for end   = (or (position #\Space line) (length line))
+              :for hash  = (subseq line 0 end)
+              :do (unless (gethash hash table) (push hash order))
+                  (setf (gethash hash table)
+                        (nconc (gethash hash table) (list file)))))
+      (loop :for hash :in (nreverse order)
+            :for group = (gethash hash table)
+            :when (rest group) :collect group))))
 
-(defun delete-duplicate-files-in-directory (dir)
-  (let ((sumtab (md5sum-files (directory (make-pathname :name :wild :type :wild
-                                                        :defaults dir)))))
-    (format *trace-output* "~&  Deleting doubles...~%")
-    (maphash (lambda (k v)
-               (declare (ignore k))
-               (when (< 1 (length v))
-                 (setf v (cdr (sort v (function string>=))))
-                 (dolist (f v)
-                   (if *just-print-p*
-                       (print `(delete-file ,f))
-                       (delete-file f)))))
-             sumtab)
-    (format *trace-output* "~&     done.~%")))
+(defun bd-archive-duplicate-groups (base)
+  "Returns all duplicate-file groups found among the regular files directly
+contained in each immediate subdirectory of BASE."
+  (loop :for dir :in (uiop:subdirectories (pathname-as-directory base))
+        :do (when *verbose* (format *trace-output* "; processing ~A~%" (namestring dir)))
+        :nconc (files-md5-groups (uiop:directory-files dir))))
 
-(defun clean-bd-archive (base)
-  (dolist (dir (directory
-                (make-pathname
-                 :directory (append (pathname-directory base) '(:wild))
-                 :defaults base)))
-    (format *trace-output* "Processing ~A~%" dir)
-    (delete-duplicate-files-in-directory dir))
-  (format *trace-output* "~&  done.~%"))
-
-;; (clean-bd-archive "/d6/pjb/bd-archive/")
-;; (clean-bd-archive "/tmp/get-bd/")
-;; (delete-duplicate-files-in-directory "/d6/pjb/nanas/")
+(options "clean-bd-archive"
+         (trash-disposal-options))
 
 (defun main (arguments)
-  (declare (ignore arguments))
-  (error "not implemented yet")
-  ex-usage)
+  (setf *base* nil)
+  (let ((operands '()))
+    (parse-options *command* arguments
+                   (lambda () nil)
+                   (lambda (argument rest)
+                     (push argument operands)
+                     rest))
+    (setf operands (nreverse operands))
+    (when (and (null operands) (not *empty-trash-requested*))
+      (print-command-help *command*)
+      (exit ex-usage))
+    (setf *base* (first operands))
+    (dispose-duplicates-command
+     (lambda () (and *base* (bd-archive-duplicate-groups *base*))))))
 
 ;;;; THE END ;;;;

@@ -40,14 +40,12 @@
 ;;;;**************************************************************************
 (in-package "SCRIPT")
 
-(defparameter *program-version* "1.0.2")
-(defparameter *program-name* "ansi-test")
-
 (command :use-systems (:com.informatimago.common-lisp)
          :use-packages ("COMMON-LISP"
                         "SCRIPT"
                         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
-         :main "COMMAND.ANSI-TEST:MAIN")
+         :main "COMMAND.ANSI-TEST:MAIN"
+         :version "1.0.2")
 
 (cl:in-package "SCRIPT")
 
@@ -78,13 +76,11 @@
 
 (cl:in-package "COMMAND.ANSI-TEST")
 
-(defparameter *program-version* "1.0.2")
-(defparameter *program-name* "ansi-test")
-
 (options "ansi-test"
          (option ("version" "-V" "--version") ()
                  "Report the version of this script."
                  (format t "~A ~A~%" script:*program-name* script:*program-version*))
+         (verbose-option)
          (help-option)
          (bash-completion-options))
 

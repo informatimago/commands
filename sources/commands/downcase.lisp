@@ -34,12 +34,18 @@
 ;;;;    Boston, MA 02111-1307 USA
 ;;;;**************************************************************************
 
+(options "downcase" (standard-options))
+
 (defun main (arguments)
-  (loop
-    :for arg :in arguments
-    :do (princ (string-downcase arg)) (princ " ")
-    :finally (terpri))
-  ex-ok)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (loop
+        :for arg :in arguments
+        :do (princ (string-downcase arg)) (princ " ")
+        :finally (terpri))
+      ex-ok)))
 
 
 ;;;; THE END ;;;;

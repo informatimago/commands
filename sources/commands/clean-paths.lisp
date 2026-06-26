@@ -45,7 +45,8 @@
 ;;;;*****************************************************************************
 (in-package "SCRIPT")
 
-(command :use-systems (:com.informatimago.common-lisp
+(command :version "1.0.2"
+         :use-systems (:com.informatimago.common-lisp
                        :split-sequence
                        :cffi
                        :cl-ppcre)
@@ -250,8 +251,6 @@ cleaned up (removing most special and non ASCII characters).
 (defun DTTOIF (dirtype) (ash dirtype 12))
 
 
-
-(defparameter *program-version* "1.0.2")
 
 (defun memq (element list)
   (member element list :test (function eq)))

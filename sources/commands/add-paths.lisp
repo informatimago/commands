@@ -48,15 +48,21 @@
 	   :collect (subseq string start next))
 	  :test (function string=)))
 
+(options "add-paths" (standard-options))
+
 (defun main (arguments)
-  (let ((old-paths (split #\: (pop arguments)))
-        (new-paths (reverse arguments)))
-    (if (endp old-paths)
-        (setf old-paths new-paths)
-        (dolist (new-path new-paths)
-          (unless (member new-path old-paths :test (function string=))
-	        (push new-path old-paths))))
-    (format t "~{~A~^:~}~%" old-paths))
-  ex-ok)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
+      (let ((old-paths (split #\: (pop arguments)))
+            (new-paths (reverse arguments)))
+        (if (endp old-paths)
+            (setf old-paths new-paths)
+            (dolist (new-path new-paths)
+              (unless (member new-path old-paths :test (function string=))
+	            (push new-path old-paths))))
+        (format t "~{~A~^:~}~%" old-paths))
+      ex-ok)))
 
 ;;;; THE END ;;;;

@@ -22,11 +22,9 @@
 
 (in-package "SCRIPT")
 
-(defparameter *program-version* "0.0.3")
-
-
 (command :name "fpm"
          :main "COMMAND.FPM:MAIN"
+         :version "0.0.3"
          :use-systems (:cl-ppcre)
          :use-packages ("COMMON-LISP" "SCRIPT")
          :shadow ("PACKAGE" "PACKAGEP" "PACKAGE-NAME")
@@ -60,10 +58,7 @@ management system (hence the need of this tool!).
 (list (command-named "FPM") (command-named "COMMAND.FPM"))
 
 (options "fpm"
-         (option ("version" "-V" "--version") ()
-                 "Report the version of this script and the underlying package system."
-                 (format t "~A ~A~%" *program-name* *program-version*)
-                 (fpm version))
+         (version-option)
 
 
          (option ("verbose" "-v" "--verbose") ()
@@ -297,8 +292,8 @@ underlying package system syntax.
 
 ;;;---------------------------------------------------------------------
 
-(defvar *verbose* nil
-  "Whether the underlying commands run should be written to stdout.")
+;; *VERBOSE* is provided (and exported) by the SCRIPT framework; this file
+;; is in the SCRIPT package, so we reuse it rather than redefining it.
 
 (defun print-command (command)
   (when *verbose*
@@ -944,9 +939,7 @@ or an expression such as (= <package>)  (<= <package>) etc."))
              (make-instance pms))
             (t
              (make-instance 'unimplemented-pms :package-management-system pms)))))
-  (parse-options *command* arguments)
-  (error "Not implemented yet.")
-  ex-usage)
+  (parse-options *command* arguments))
 
 ;;;------------------------------------------------------------
 #-(and)

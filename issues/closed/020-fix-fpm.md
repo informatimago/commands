@@ -4,7 +4,7 @@ title: `fpm`: errors on every run + duplicate *verbose*
 severity: critical
 commands: [fpm]
 labels: [bug]
-status: open
+status: FIXED - removed fatal error line 948 + duplicate *verbose* defvar
 ---
 
 # `fpm`: errors on every run + duplicate *verbose*

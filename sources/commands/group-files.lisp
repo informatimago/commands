@@ -39,7 +39,13 @@
 
 (command :use-systems (:com.informatimago.common-lisp))
 
+(options "group-files" (standard-options))
+
 (defun main (arguments)
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands)))
   (dolist (class (mapcar
                   (lambda (class) (mapcar (function cdr) class))
                   (remove-if
@@ -61,7 +67,7 @@
     (dolist (file class)
       (princ file)
       (terpri)))
-  ex-ok)
+  ex-ok)))
 
 
 ;; find the-* -name \*.mp3|while read f ; do echo $(echo $f | sed -e 's^.*/[0-9][0-9]-\([^/]*\)\.mp3$^\1^'|sed -e 's%--live%%')  $f ; done|sort

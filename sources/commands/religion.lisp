@@ -252,7 +252,7 @@ of the religion."))
   ("E" "In an airport or bus terminal.")
   ("F" "In a submarine.")
   ("G" "In a graveyard or mausoleum.")
-  ("F" "In a bathtub or jacuzzi."))
+  ("H" "In a bathtub or jacuzzi."))
 
 
 ;;;-----------------------------------------------------------------
@@ -761,11 +761,11 @@ while the explainations are written to stdout."
                  (loop
                    :for (code name) :in (sort *religion-db* (function string<) :key (function line-code))
                    :initially (progn
-                                (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")
-                                (format t " ~9D  ~:(~A~)~%" "Code" "Name")
-                                (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------"))
-                   :do (format t " ~9D  ~:(~A~)~%" code name)
-                   :finally (format t " ~9D  ~:(~A~)~%" "---------" "----------------------------------------")))
+                                (format t " ~9A  ~:(~A~)~%" "---------" "----------------------------------------")
+                                (format t " ~9A  ~:(~A~)~%" "Code" "Name")
+                                (format t " ~9A  ~:(~A~)~%" "---------" "----------------------------------------"))
+                   :do (format t " ~9A  ~:(~A~)~%" code name)
+                   :finally (format t " ~9A  ~:(~A~)~%" "---------" "----------------------------------------")))
 
 
          (option ("-V" "--version") ()
@@ -797,6 +797,7 @@ while the explainations are written to stdout."
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 "))
+         (verbose-option)
          (help-option)
          (bash-completion-options))
 
@@ -804,7 +805,6 @@ while the explainations are written to stdout."
   (setf *religion-pathname* (make-pathname :name "religions" :type "data" :version NIL :case :local
                                            :defaults (user-homedir-pathname))
         *religion-db* (load-religion-database *religion-pathname*)
-        *debug* t
         *random-state* (make-random-state t))
   (parse-options (or *command* (command-named "religion")) arguments)
   ex-ok)

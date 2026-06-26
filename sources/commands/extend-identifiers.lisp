@@ -10,8 +10,10 @@
               (princ ch)
               (format t "\\u~4,'0X" (char-code ch))))))
 
+(options "extend-identifiers" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (loop
     :for line := (read-line *standard-input* nil nil)
     :while line

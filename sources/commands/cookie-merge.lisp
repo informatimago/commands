@@ -46,13 +46,19 @@
                (write-line "%" stream))
              cookies)))
 
+(options "cookie-merge" (standard-options))
+
 (defun main (arguments)
- (let ((cookies (make-hash-table :test (function equalp))))
-   (dolist (path arguments)
-     (setf cookies (merge-cookies (read-cookies path) cookies)))
-   (write-cookies "/tmp/cookies" cookies)
-   (format t "Wrote /tmp/cookies~%")
-   (finish-output))
+  (let ((operands '()))
+    (parse-options *command* arguments nil
+                   (lambda (arg rest) (push arg operands) rest))
+    (let ((arguments (nreverse operands))
+          (cookies   (make-hash-table :test (function equalp))))
+      (dolist (path arguments)
+        (setf cookies (merge-cookies (read-cookies path) cookies)))
+      (write-cookies "/tmp/cookies" cookies)
+      (format t "Wrote /tmp/cookies~%")
+      (finish-output)))
   ex-ok)
 
 ;;;; THE END ;;;;

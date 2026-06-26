@@ -159,8 +159,10 @@ NOTE:    This version by Paul Graham in On Lisp."
       (:otherwise ()
                   (writeln "-ERR Unknown command")))))
 
+(options "pseudo-pop" (standard-options))
+
 (defun main (arguments)
-  (declare (ignore arguments))
+  (parse-options *command* arguments)
   (pseudo-pop3-server)
   ex-ok)
 

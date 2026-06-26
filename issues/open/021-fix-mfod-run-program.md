@@ -1,34 +1,60 @@
 ---
 id: 021
-title: `mfod`: clobbers SCRIPT:RUN-PROGRAM and *verbose*
-severity: high
+title: `mfod`: redundant (in-package "SCRIPT"); add -V
+severity: low
+labels: [cleanup, cli]
+status: in-progress - added (version-option); in-package cleanup deferred
 commands: [mfod]
-labels: [bug]
-status: open
 ---
 
-# `mfod`: clobbers SCRIPT:RUN-PROGRAM and *verbose*
+# `mfod`: redundant (in-package "SCRIPT"); add -V
 
-**Severity:** high  **Commands:** `mfod`  **Labels:** bug
+**Severity:** low  **Commands:** `mfod`  **Labels:** cleanup, cli
 
-## Status: broken (cross-command contamination)
+## CORRECTION (2026-06): the original "clobbers SCRIPT:RUN-PROGRAM" claim was wrong
 
-`mfod.lisp:40` does `(in-package "SCRIPT")` before the `command` form, so its
-helpers are defined **in the SCRIPT package**:
+On closer inspection the contamination described in the first version of this
+issue does **not** happen:
 
-- line 46 `(defun run-program ...)` **redefines `SCRIPT:RUN-PROGRAM`** globally —
-  the `:shadow ("RUN-PROGRAM")` on the command form was meant to keep it local,
-  but the early `in-package` defeats it. Other commands now get mfod's version.
-- line 72 `(defvar *verbose* nil)` and line 88 `(defparameter *program-version*)`
-  overwrite the framework specials.
+- `builder.lisp:161-170` (`compile-and-load-command`) binds `*package*` to the
+  command's own package (`COMMAND.MFOD`) for both `compile-file` and `load`.
+- The `command` macro additionally emits `(in-package "COMMAND.MFOD")`.
+- The `command` form carries `:shadow ("RUN-PROGRAM")`, so `COMMAND.MFOD` has its
+  own `RUN-PROGRAM` symbol.
 
-## Fix
+Therefore `(defun run-program ...)` at line 46 defines
+**`COMMAND.MFOD::RUN-PROGRAM`**, not `SCRIPT:RUN-PROGRAM`. There is no
+cross-command contamination. Likewise `(defvar *verbose* ...)` and
+`(defparameter *program-version* ...)` after the command form are in
+`COMMAND.MFOD` (which inherits the symbols from SCRIPT) — they re-default the
+shared specials, which is redundant but not harmful at run time (and the global
+`*program-version*` concern is tracked separately in issue 006).
 
-- Remove `(in-package "SCRIPT")`; put `(command :name "mfod" :shadow ("RUN-PROGRAM")
-  ...)` first so helpers land in `COMMAND.MFOD` and the shadow works as intended.
-- Drop the redundant `*verbose*`/`*program-version*` (re)definitions.
-- Add a `-V/--version` option (mfod defines `*program-version*` "1.0.2" but never
-  exposes it) — see 001.
+## What is actually true
 
-This is the concrete instance behind epic 003; fix it explicitly and verify
-`SCRIPT:RUN-PROGRAM` is intact for other commands.
+- `(in-package "SCRIPT")` at line 40 is **redundant**: the builder already loads
+  the file with `*package*` = `COMMAND.MFOD`, which `:use`s SCRIPT, so `command`
+  resolves without it. It is only *risky* in the general anti-pattern sense (if a
+  `defun` were placed before the `command` form it would land in SCRIPT) — but
+  mfod defines nothing before the form, so today it is harmless. See epic 003.
+- mfod had no `-V/--version` even though it defines `*program-version*` "1.0.2".
+
+## Done (verified against a real build)
+
+- Added `(version-option)` to the `mfod` options list.
+- **Found and fixed a second, real bug:** `main` probed for emacs servers and
+  returned early ("There is no emacs server", `ex-unavailable`) **before**
+  calling `parse-options`.  So with no running emacs server, `mfod -V`, `-h`,
+  `--verbose` and `--bash-completions` were all ignored.  `main` now parses the
+  options first (so the standard options are honoured regardless) and reports
+  server status from the no-argument default thunk.  Verified: `mfod -V` and
+  `mfod --help` work with no emacs server present.
+
+The version value itself is still the global (issue 006).
+
+## Deferred (needs the target platform to verify)
+
+- Removing the redundant `(in-package "SCRIPT")` — safe per the analysis above
+  (the build confirms nothing is defined before the `command` form); folded
+  into epic 003.
+- Dropping the redundant `(defvar *verbose* nil)` (line 72).

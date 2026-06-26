@@ -4,7 +4,7 @@ title: `dedup`: wrong :main package (won't dispatch) + unguarded delete
 severity: high
 commands: [dedup]
 labels: [bug, data-loss-risk]
-status: open
+status: FIXED - redesigned around shared Trash framework; verified end-to-end
 ---
 
 # `dedup`: wrong :main package (won't dispatch) + unguarded delete
@@ -41,3 +41,28 @@ This command help should explicit clearly what it does.  Is it not a
 duplicate of remove-duplicate-files? If they're doing 90% the same
 thing, perhaps it's better to merge them and use options of the
 variants?
+
+## Resolution (verified against a real build)
+
+Decision (confirmed with maintainer): keep `dedup` and `remove-duplicate-files`
+as two separate commands, but factor the shared 90% into one framework helper.
+
+Done:
+
+- New Trash framework in `script.lisp` (exported from `packages.lisp`):
+  `default-trash-directory` (macOS `~/.Trash`, else `$XDG_DATA_HOME/Trash/files/`),
+  `trash-file` (collision-safe rename, cross-filesystem copy+delete fallback),
+  `empty-trash` (refuses the system Trash), `dispose-of-duplicates`, and the
+  shared CLI `trash-disposal-options` + `dispose-duplicates-command`.
+- `dedup` rewritten as a thin client: correct package (dropped the bad `:main`
+  and `(in-package "SCRIPT")`); reads `KEY<2 spaces>PATH` groups from stdin
+  keeping the **first** seen; **malformed lines are ignored** (no more
+  `(+ 2 nil)` crash); disposes via the shared driver.
+- **Safe by default**: duplicates are moved to the Trash, not deleted.
+  `--dry-run` lists only; `--trash DIR` overrides; `--delete` deletes
+  permanently; `--empty-trash` empties a non-system Trash; `--help` prints the
+  resolved Trash directory; `-v/-V` added.
+
+Verified end-to-end: default trash-move (keeps first), Trash homonym collision
+(`b.txt` -> `b.txt.1`), `--dry-run`, `--delete`, `--empty-trash`, and malformed
+input all behave correctly.  See issue 025 for the `remove-duplicate-files` half.

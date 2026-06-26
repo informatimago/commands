@@ -4,7 +4,7 @@ title: `split-merge`: `-l` used for both --left and --right
 severity: medium
 commands: [split-merge]
 labels: [bug, cli]
-status: open
+status: FIXED - right option rekeyed -r/--right
 ---
 
 # `split-merge`: `-l` used for both --left and --right
