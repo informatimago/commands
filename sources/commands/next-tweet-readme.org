@@ -143,8 +143,8 @@ browser as described below.
 Store them in =~/.authinfo= (see the configuration section):
 
 #+begin_example
-machine api.x.com/auth-token login informatimago password <auth_token cookie>
-machine api.x.com/csrf-token login informatimago password <ct0 cookie>
+machine api.x.com port auth-token login informatimago password <auth_token cookie>
+machine api.x.com port csrf-token login informatimago password <ct0 cookie>
 #+end_example
 
 The =ct0= cookie is both the CSRF token (sent in the
@@ -194,15 +194,16 @@ browser.
 ** ~/.authinfo
 
 Store the four secrets in =~/.authinfo= (netrc format, the same file
-used by Emacs), one machine entry per secret, using the configured
-=:machine= (default =api.x.com=) as prefix, and your X username as
-login:
+used by Emacs), one entry per secret.  All entries share the same
+=machine= (the configured =:machine=, a bare FQDN, =api.x.com= by
+default) and your X username as =login=; the individual secret is
+selected by the =port= field:
 
 #+begin_example
-machine api.x.com/consumer-key    login informatimago password XXXXXXXXXXXXXXXX
-machine api.x.com/consumer-secret login informatimago password XXXXXXXXXXXXXXXX
-machine api.x.com/access-token    login informatimago password XXXXXXXXXXXXXXXX
-machine api.x.com/access-secret   login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com port consumer-key    login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com port consumer-secret login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com port access-token    login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com port access-secret   login informatimago password XXXXXXXXXXXXXXXX
 #+end_example
 
 Make the file private:
@@ -213,7 +214,16 @@ chmod 600 ~/.authinfo
 
 Notes:
 
-- Passwords containing spaces may be written between double quotes.
+- The =port= field keeps =machine= a clean FQDN, consistent with the
+  rest of a typical =~/.authinfo=.  The legacy form, appending the
+  secret to the machine name (=machine api.x.com/consumer-key …=), is
+  still accepted as a fallback.
+- =#= comments (a =#= as the first non-blank character of a line) and
+  blank lines are ignored, so the =api.x.com= entries may sit among
+  your other credentials without interfering.
+- Passwords may contain any character except space (a =#= inside a
+  password is fine; only a line-leading =#= starts a comment).
+  Passwords containing spaces may be written between double quotes.
 - Encrypted =~/.authinfo.gpg= is /not/ read; use the
   =NEXT_TWEET_AUTHINFO= environment variable to point to an
   alternate plain file if needed.
@@ -226,7 +236,7 @@ The configuration file is a Lisp property list:
 ;; -*- mode:lisp -*-
 (:backend         :api                  ; :api (default) or :web
  :account         "informatimago"       ; login to match in ~/.authinfo
- :machine         "api.x.com"           ; machine prefix in ~/.authinfo
+ :machine         "api.x.com"           ; machine (FQDN) in ~/.authinfo
  :api-base        "https://api.x.com"   ; :api endpoint base URL
  :page-size       100                   ; tweets per request (5-100)
  :max-pages       1                     ; max requests per refill

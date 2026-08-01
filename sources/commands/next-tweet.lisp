@@ -87,17 +87,19 @@
 ;;;;         :web-query-id-detail nil               ; TweetDetail query id
 ;;;;         :web-features        nil)              ; features JSON string (or nil)
 ;;;;
-;;;;    Credentials: ~/.authinfo (netrc format).
+;;;;    Credentials: ~/.authinfo (netrc format).  The several secrets
+;;;;    share the same :machine (a bare FQDN) and are disambiguated by
+;;;;    the port field; # comments and blank lines are ignored.
 ;;;;
 ;;;;    For the :api backend, create an application in the X developer
 ;;;;    portal <https://developer.x.com/>, generate the "API Key and
 ;;;;    Secret" (consumer) and the "Access Token and Secret" (user
 ;;;;    context, read permission), and store them as:
 ;;;;
-;;;;        machine api.x.com/consumer-key    login informatimago password XXXX
-;;;;        machine api.x.com/consumer-secret login informatimago password XXXX
-;;;;        machine api.x.com/access-token    login informatimago password XXXX
-;;;;        machine api.x.com/access-secret   login informatimago password XXXX
+;;;;        machine api.x.com port consumer-key    login informatimago password XXXX
+;;;;        machine api.x.com port consumer-secret login informatimago password XXXX
+;;;;        machine api.x.com port access-token    login informatimago password XXXX
+;;;;        machine api.x.com port access-secret   login informatimago password XXXX
 ;;;;
 ;;;;    Requests are then signed with OAuth 1.0a (HMAC-SHA1) user
 ;;;;    context.
@@ -106,13 +108,17 @@
 ;;;;    logged-in browser session (developer tools > Application >
 ;;;;    Cookies for x.com), and store them as:
 ;;;;
-;;;;        machine api.x.com/auth-token  login informatimago password XXXX
-;;;;        machine api.x.com/csrf-token  login informatimago password XXXX
+;;;;        machine api.x.com port auth-token login informatimago password XXXX
+;;;;        machine api.x.com port csrf-token login informatimago password XXXX
 ;;;;
 ;;;;    (csrf-token is the ct0 cookie.)  You must also set
 ;;;;    :web-query-id-home (and :web-query-id-detail for --enter) in the
 ;;;;    configuration; see the readme for how to read them from the
 ;;;;    browser.
+;;;;
+;;;;    The legacy form, with the secret appended to the machine name
+;;;;    (machine api.x.com/auth-token …), is still accepted as a
+;;;;    fallback.
 ;;;;
 ;;;;    State (tweet queue, since-id, cached user id) is kept in
 ;;;;    :state-directory, in a subdirectory named after the account, so
@@ -240,15 +246,27 @@ user home directory; otherwise return it as a pathname."
 
 (defun tokenize-authinfo (stream)
   "Returns the list of tokens in the netrc STREAM.
-Tokens are separated by whitespace; a token may be quoted with double-quotes,
-in which case backslash escapes the next character."
+Tokens are separated by whitespace (blank lines are therefore
+ignored).  A token may be quoted with double-quotes, in which case
+backslash escapes the next character.  A # that is the first non-blank
+character of a line introduces a comment that runs to the end of the
+line; a # anywhere else is an ordinary character (passwords may
+contain #).  A leading UTF-8 BOM is ignored."
   (loop
     :with tokens := '()
+    :with bol    := t                    ; at the beginning of a line?
     :for ch := (read-char stream nil nil)
     :while ch
     :do (cond
-          ((member ch '(#\space #\tab #\newline #\return #\page)))
+          ((char= ch #\newline) (setf bol t))
+          ((member ch '(#\space #\tab #\return #\page))) ; keep BOL as is
+          ((= (char-code ch) #xFEFF))    ; ignore a byte-order mark
+          ((and bol (char= ch #\#))      ; full-line comment: skip to EOL
+           (loop :for c := (read-char stream nil nil)
+                 :while (and c (char/= c #\newline)))
+           (setf bol t))
           ((char= ch #\")
+           (setf bol nil)
            (push (with-output-to-string (token)
                    (loop
                      :for c := (read-char stream nil nil)
@@ -259,6 +277,7 @@ in which case backslash escapes the next character."
                                      token)))
                  tokens))
           (t
+           (setf bol nil)
            (push (with-output-to-string (token)
                    (write-char ch token)
                    (loop
@@ -268,72 +287,107 @@ in which case backslash escapes the next character."
                  tokens)))
     :finally (return (nreverse tokens))))
 
+(defparameter *authinfo-value-keywords*
+  '("login" "user" "password" "account" "port" "protocol")
+  "netrc keywords that are followed by a value token.")
+
 (defun parse-authinfo (pathname)
   "Returns a list of entries; each entry is an alist of (key . value) strings.
-Entries begin at each \"machine\" (or \"default\") token."
+A new entry starts at each \"machine\" or \"default\" token.  Recognized
+keywords (login/user, password, account, port, protocol) take the
+following token as their value (\"user\" is stored as \"login\"); any
+other token is ignored, so a stray token (e.g. a leftover from a
+comment) cannot desynchronize the parse."
   (with-open-file (stream pathname :if-does-not-exist nil)
     (when stream
-      (loop
-        :with entries := '()
-        :with entry := '()
-        :with tokens := (tokenize-authinfo stream)
-        :while tokens
-        :do (let ((key (pop tokens)))
-              (cond
-                ((string= key "default")
-                 (when entry (push (nreverse entry) entries))
-                 (setf entry (list (cons "machine" "default"))))
-                ((string= key "macdef") ; skip macro definitions
-                 (pop tokens))
-                (t
-                 (let ((value (pop tokens)))
-                   (when (string= key "machine")
-                     (when entry (push (nreverse entry) entries))
-                     (setf entry '()))
-                   (push (cons key value) entry)))))
-        :finally (when entry (push (nreverse entry) entries))
-                 (return (nreverse entries))))))
+      (let ((tokens  (tokenize-authinfo stream))
+            (entries '())
+            (entry   nil))
+        (flet ((flush () (when entry (push (nreverse entry) entries) (setf entry nil))))
+          (loop
+            :while tokens
+            :do (let ((key (pop tokens)))
+                  (cond
+                    ((string-equal key "machine")
+                     (flush)
+                     (setf entry (list (cons "machine" (or (pop tokens) "")))))
+                    ((string-equal key "default")
+                     (flush)
+                     (setf entry (list (cons "machine" "default"))))
+                    ((string-equal key "macdef") ; skip the macro name
+                     (pop tokens))
+                    ((member key *authinfo-value-keywords* :test (function string-equal))
+                     (let ((value (pop tokens)))
+                       (when (and entry value)
+                         (push (cons (if (string-equal key "user") "login" (string-downcase key))
+                                     value)
+                               entry))))
+                    (t nil)))            ; ignore unknown tokens
+            :finally (flush))
+          (nreverse entries))))))
+
+(defun authinfo-field (entry key)
+  (cdr (assoc key entry :test (function string=))))
 
 (defun authinfo-password (entries machine login)
   "Returns the password of the ENTRIES entry matching MACHINE and LOGIN.
 When LOGIN is NIL, the first entry matching MACHINE is used."
   (loop
     :for entry :in entries
-    :when (and (equal machine (cdr (assoc "machine" entry :test (function string=))))
+    :when (and (equal machine (authinfo-field entry "machine"))
                (or (null login)
-                   (equal login (cdr (assoc "login" entry :test (function string=))))))
-      :do (return (cdr (assoc "password" entry :test (function string=))))))
+                   (equal login (authinfo-field entry "login"))))
+      :do (return (authinfo-field entry "password"))))
+
+(defun authinfo-lookup (entries machine suffix login)
+  "Returns the password identifying the SUFFIX secret of (MACHINE, LOGIN).
+Two conventions are accepted, in order of preference:
+  1. a bare FQDN machine disambiguated by the port field
+       machine MACHINE port SUFFIX login LOGIN password …
+  2. the suffix appended to the machine (legacy)
+       machine MACHINE/SUFFIX login LOGIN password …
+LOGIN NIL matches any login."
+  (flet ((login-ok (entry)
+           (or (null login) (equal login (authinfo-field entry "login")))))
+    (or (loop :for entry :in entries
+              :when (and (equal machine (authinfo-field entry "machine"))
+                         (equal suffix  (authinfo-field entry "port"))
+                         (login-ok entry))
+                :return (authinfo-field entry "password"))
+        (loop :for entry :in entries
+              :when (and (equal (concat machine "/" suffix) (authinfo-field entry "machine"))
+                         (login-ok entry))
+                :return (authinfo-field entry "password")))))
+
+(defun make-authinfo-looker (path entries machine login)
+  "Returns a function of one SUFFIX returning its password, or signaling
+a helpful error naming both accepted entry forms."
+  (lambda (suffix)
+    (or (authinfo-lookup entries machine suffix login)
+        (error "Missing ~A credential in ~A: add a line~%  machine ~A port ~A~@[ login ~A~] password …~@
+                (or the legacy \"machine ~A/~A …\")"
+               suffix (namestring path) machine suffix login machine suffix))))
 
 (defun load-credentials ()
   "Returns a plist (:consumer-key :consumer-secret :access-token :access-secret)
 read from ~/.authinfo, for the configured :machine and :account."
   (let* ((path    (authinfo-pathname))
-         (entries (parse-authinfo path))
-         (machine (config :machine))
-         (login   (config :account)))
-    (flet ((look-up (suffix)
-             (or (authinfo-password entries (concat machine "/" suffix) login)
-                 (error "Missing entry \"machine ~A/~A~@[ login ~A~] password …\" in ~A"
-                        machine suffix login (namestring path)))))
-      (list :consumer-key  (look-up "consumer-key")
-            :consumer-secret (look-up "consumer-secret")
-            :access-token  (look-up "access-token")
-            :access-secret (look-up "access-secret")))))
+         (look-up (make-authinfo-looker path (parse-authinfo path)
+                                        (config :machine) (config :account))))
+    (list :consumer-key    (funcall look-up "consumer-key")
+          :consumer-secret (funcall look-up "consumer-secret")
+          :access-token    (funcall look-up "access-token")
+          :access-secret   (funcall look-up "access-secret"))))
 
 (defun web-credentials ()
   "Returns a plist (:auth-token :ct0) read from ~/.authinfo, for the
 configured :machine and :account.  These are the session cookies of
 the X web client: auth_token and ct0 (the CSRF token)."
   (let* ((path    (authinfo-pathname))
-         (entries (parse-authinfo path))
-         (machine (config :machine))
-         (login   (config :account)))
-    (flet ((look-up (suffix)
-             (or (authinfo-password entries (concat machine "/" suffix) login)
-                 (error "Missing entry \"machine ~A/~A~@[ login ~A~] password …\" in ~A"
-                        machine suffix login (namestring path)))))
-      (list :auth-token (look-up "auth-token")
-            :ct0        (look-up "csrf-token")))))
+         (look-up (make-authinfo-looker path (parse-authinfo path)
+                                        (config :machine) (config :account))))
+    (list :auth-token (funcall look-up "auth-token")
+          :ct0        (funcall look-up "csrf-token"))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
