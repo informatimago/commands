@@ -868,7 +868,14 @@ form."
                                :use '())))
     (unwind-protect
          (let ((*package* package)
-               (*read-suppress* t))
+               ;; Note: *read-suppress* would make READ return NIL for
+               ;; every form, so the command form would never be found,
+               ;; and :use-systems would not be quickloaded before
+               ;; compiling the commands.  The command form occurs
+               ;; before any #. in the command sources, so we only bind
+               ;; *read-eval* to NIL; a form that cannot be read is
+               ;; skipped by IGNORE-ERRORS.
+               (*read-eval* nil))
            (loop
              :for form := (ignore-errors (read source nil source))
              :until (eql form source)
