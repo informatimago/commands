@@ -2,7 +2,13 @@
 
 ## Status
 
-open
+closed — implemented.  `next-tweet` now tracks the last displayed
+tweet, has a timeline/thread reading `:context`, and implements
+`--enter` (self-replies of the author, printed with the author on
+their own first line) and `--leave`.  A `:web` backend (X web client
+GraphQL, session cookies) was added alongside the `:api` backend; on
+`:web`, `--enter` uses `TweetDetail` and is not limited to the 7-day
+recent-search window.
 
 ## Description
 

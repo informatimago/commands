@@ -18,16 +18,27 @@ $ next-tweet
 0
 #+end_example
 
-Tweets are fetched from the official X API v2, and buffered in a
-local queue; the API is only queried when the queue is empty, and at
+Tweets are fetched from one of two backends and buffered in a local
+queue; the backend is only queried when the queue is empty, and at
 most once every =:fetch-interval= seconds, so the command can safely
 be called from a shell prompt.
 
+The =:backend= configuration key selects between:
+
+- =:api= (default) :: the official X API v2.  Clean and stable, but
+  requires a developer account, and reading is /paid/
+  (pay-per-request).
+- =:web= :: the private GraphQL API of the X web client,
+  authenticated with the session cookies of a logged-in browser.
+  Free, but /unofficial/: it may be contrary to the X terms of
+  service, and its query ids and feature flags drift over time and
+  must occasionally be refreshed from the browser.
+
 Threads: when the displayed tweet is the head (or a part) of a
 thread, =next-tweet --enter= switches the reading context to that
-thread (the self-replies of its author, in chronological order), and
-=next-tweet --leave= returns to the timeline, which is preserved
-meanwhile.
+thread (the self-replies of its author, in chronological order, each
+prefixed by the author on its own first line), and =next-tweet
+--leave= returns to the timeline, which is preserved meanwhile.
 
 * Requirements
 
@@ -35,12 +46,18 @@ meanwhile.
   [[https://gitlab.com/informatimago/commands]] (systems: babel,
   cl-base64, drakma, ironclad, split-sequence, yason).
 - An X account (the one whose Following timeline will be read).
-- An X developer account with API v2 read access (see below).
-  Reading via the API is /paid/ (pay-per-request billing for new
-  developer accounts since 2026); one request returns up to
-  =:page-size= (≤ 100) tweets, and =next-tweet= performs at most one
-  refill every =:fetch-interval= seconds, so the cost is of the order
-  of a few cents per day.
+- For the =:api= backend: an X developer account with API v2 read
+  access (see below).  Reading via the API is /paid/ (pay-per-request
+  billing for new developer accounts since 2026); one request returns
+  up to =:page-size= (≤ 100) tweets, and =next-tweet= performs at most
+  one refill every =:fetch-interval= seconds, so the cost is of the
+  order of a few cents per day.
+- For the =:web= backend: nothing but a logged-in browser session on
+  x.com, from which two cookies and two GraphQL query ids are copied
+  (see [[*The =:web= backend (session cookies)][The =:web= backend]]).
+
+If creating a developer account is not possible (e.g. the signup
+keeps failing), use the =:web= backend.
 
 * Creating the X API credentials
 
@@ -100,6 +117,76 @@ OAuth 1.0a user-context secrets:
 Each secret is only displayed once; store them immediately in
 =~/.authinfo= (next section).
 
+* The =:web= backend (session cookies)
+
+When a developer account is unavailable, =next-tweet= can read the
+timeline the same way the x.com web app does: through its private
+GraphQL API, authenticated with the cookies of a logged-in browser
+session.
+
+/Caveats./ This is an unofficial, unsupported interface.  It may be
+contrary to the X terms of service (use at your own risk).  Two
+things drift over time and must occasionally be refreshed by hand:
+the GraphQL /query ids/ (they change on almost every web app
+deployment) and the /features/ parameter (X adds and removes feature
+flags).  When a request starts failing, re-read them from the
+browser as described below.
+
+** Copy the two cookies
+
+1. Log in to [[https://x.com/]] in a browser.
+2. Open the developer tools (=F12=) > /Application/ (Chrome) or
+   /Storage/ (Firefox) > /Cookies/ > =https://x.com=.
+3. Copy the values of the =auth_token= and =ct0= cookies.
+
+Store them in =~/.authinfo= (see the configuration section):
+
+#+begin_example
+machine api.x.com/auth-token login informatimago password <auth_token cookie>
+machine api.x.com/csrf-token login informatimago password <ct0 cookie>
+#+end_example
+
+The =ct0= cookie is both the CSRF token (sent in the
+=x-csrf-token= header) and part of the cookie header; =next-tweet=
+handles that.  These cookies expire (or are invalidated by logging
+out), so they must be refreshed from time to time.
+
+** Read the GraphQL query ids
+
+The query ids identify the specific GraphQL operations of the web
+app.  To find them:
+
+1. On [[https://x.com/home]], select the /Following/ tab.
+2. In the developer tools /Network/ tab, filter on =graphql=.
+3. The request named =HomeLatestTimeline= has a URL of the form
+   =https://x.com/i/api/graphql/<QUERYID>/HomeLatestTimeline=.  Copy
+   =<QUERYID>= into =:web-query-id-home=.
+4. Open any thread; the =TweetDetail= request gives, the same way,
+   the id for =:web-query-id-detail= (only needed for =--enter=).
+
+Optionally, from the same =HomeLatestTimeline= request, copy the
+=features= query parameter (a JSON object) into =:web-features=;
+otherwise a built-in default is used, which may become stale.
+
+** Example =:web= configuration
+
+#+begin_src lisp
+;; -*- mode:lisp -*-
+(:backend            :web
+ :account            "informatimago"
+ :machine            "api.x.com"
+ :web-base           "https://x.com/i/api/graphql"
+ :web-query-id-home   "u5oAc2ftIF2y3Tnf2yefGw"   ; refresh from the browser
+ :web-query-id-detail "xd_EMdYvB9hfZsZ6Idri0w"   ; refresh from the browser
+ :page-size          20
+ :fetch-interval     900
+ :state-directory    "~/.cache/next-tweet/")
+#+end_src
+
+The query ids above are only illustrative placeholders; they /will/
+be wrong by the time you read this — copy the current ones from your
+browser.
+
 * Configuration
 
 ** ~/.authinfo
@@ -135,19 +222,26 @@ The configuration file is a Lisp property list:
 
 #+begin_src lisp
 ;; -*- mode:lisp -*-
-(:account         "informatimago"       ; login to match in ~/.authinfo
+(:backend         :api                  ; :api (default) or :web
+ :account         "informatimago"       ; login to match in ~/.authinfo
  :machine         "api.x.com"           ; machine prefix in ~/.authinfo
- :api-base        "https://api.x.com"   ; API endpoint base URL
- :page-size       100                   ; tweets per API request (5-100)
- :max-pages       1                     ; max API requests per refill
- :fetch-interval  900                   ; min. seconds between API calls
+ :api-base        "https://api.x.com"   ; :api endpoint base URL
+ :page-size       100                   ; tweets per request (5-100)
+ :max-pages       1                     ; max requests per refill
+ :fetch-interval  900                   ; min. seconds between calls
  :show-author     nil                   ; when true, prefix "@author: "
- :state-directory "~/.cache/next-tweet/")
+ :state-directory "~/.cache/next-tweet/"
+ ;; :web backend only (see "The :web backend" section):
+ :web-base            "https://x.com/i/api/graphql"
+ :web-query-id-home   nil               ; HomeLatestTimeline query id
+ :web-query-id-detail nil               ; TweetDetail query id (for --enter)
+ :web-features        nil)              ; features JSON string (nil => default)
 #+end_src
 
 All keys are optional; the values above are the defaults (except
-=:account=, which you should set).  =:fetch-interval= directly
-controls the API cost: with 900, at most 4 requests (up to 400
+=:account=, which you should set, and the =:web-query-id-*=, which
+are required for the =:web= backend).  =:fetch-interval= directly
+controls the =:api= cost: with 900, at most 4 requests (up to 400
 tweets) per hour.
 
 The =NEXT_TWEET_CONFIG= environment variable selects an alternate
@@ -199,9 +293,12 @@ Notes:
 
 - =--enter= applies to the /last displayed/ tweet (shown by a plain
   call or by =--peek=).
-- Threads are fetched with the recent search API, which only covers
-  the last 7 days; entering an older thread prints =0= and stays on
-  the timeline.
+- Each thread tweet is printed with its author on its own first
+  line, followed by the tweet text.
+- With the =:api= backend, threads are fetched with the recent search
+  API, which only covers the last 7 days; entering an older thread
+  prints =0= and stays on the timeline.  The =:web= backend
+  (=TweetDetail=) is not limited to 7 days.
 - At the end of a thread, =next-tweet= prints =0= (and a reminder on
   stderr) until =--leave= is called.
 - Convenient aliases: =alias enter-thread='next-tweet --enter'= and
@@ -228,6 +325,8 @@ or, within the =commands= image, call
 
 * Troubleshooting
 
+** =:api= backend
+
 - *401 Unauthorized* :: Wrong or stale secrets.  Check the four
   =~/.authinfo= entries (machine prefix and login must match
   =:machine= and =:account=), and regenerate the Access Token if the
@@ -235,13 +334,29 @@ or, within the =commands= image, call
   clock: OAuth 1.0a signatures embed a timestamp.
 - *403 Forbidden* :: The App is not attached to a Project, or the
   account has no read access (billing not configured).
-- *429 Too Many Requests* :: Rate limit or spending cap reached;
-  =next-tweet= prints =0= and retries after =:fetch-interval=.
-- *Tweets are skipped* :: More than =:page-size= × =:max-pages=
-  tweets arrived between two refills; only the most recent ones are
-  fetched.  Increase =:max-pages= (each page is a billed request) or
-  decrease =:fetch-interval=.
+- *"Failed to create account"* :: The developer signup itself is
+  failing (this happens); switch to the =:web= backend instead.
 - *--enter prints 0* :: The tweet has no self-replies, or the thread
   is older than 7 days (recent search limitation).
+
+** =:web= backend
+
+- *401 / 403* :: The cookies are wrong or expired: log in again and
+  copy fresh =auth_token= and =ct0= values.  =ct0= must match the
+  =auth_token= from the same session.
+- *A "features" / "query id" error, or empty results* :: The GraphQL
+  operation drifted; refresh =:web-query-id-home= /
+  =:web-query-id-detail= (and possibly =:web-features=) from the
+  browser as described above.
+- *=Set :web-query-id-home ...= error* :: The query id is not set in
+  the configuration; read it from the browser.
+
+** Both backends
+
+- *429 Too Many Requests* :: Rate limit (or, on =:api=, spending cap)
+  reached; =next-tweet= prints =0= and retries after =:fetch-interval=.
+- *Tweets are skipped* :: More than =:page-size= × =:max-pages=
+  tweets arrived between two refills; only the most recent ones are
+  fetched.  Increase =:max-pages= or decrease =:fetch-interval=.
 
 # next-tweet-readme.org ends here.
