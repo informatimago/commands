@@ -291,7 +291,8 @@ from the current top of the timeline).
 =--previous= is useful to look at the last tweet again, or to
 re-obtain its identifiers for a report: =next-tweet --debug --previous=
 prints, on stderr, the account and self user-id, and the tweet's id,
-conversation/thread id and author.
+conversation/thread id, author and its origin URL
+(=https://x.com/<author>/status/<id>=).
 
 A thread reading session:
 

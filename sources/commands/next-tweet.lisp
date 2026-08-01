@@ -1078,15 +1078,25 @@ account, useful to report data to X."
                (or (config :account) "(any)")
                (or (getf state :user-id) "(unknown)"))))
 
+(defun tweet-url (tweet)
+  "Returns the canonical x.com URL of TWEET (the \"origin\" URL to
+report or open it).  When the author is unknown, the /i/ placeholder is
+used, which x.com resolves from the tweet id."
+  (format nil "https://x.com/~A/status/~A"
+          (or (getf tweet :author) "i")
+          (getf tweet :id)))
+
 (defun debug-tweet (tweet)
   "When --debug is set, prints the identifiers of TWEET (tweet id,
-conversation/thread id, author), useful to report it to X."
+conversation/thread id, author) and its origin URL, useful to report it
+to X."
   (when (and tweet (config :debug))
     (debug-log "tweet id: ~A  conversation/thread id: ~A  author: @~A  created: ~A"
                (getf tweet :id)
                (getf tweet :conversation)
                (getf tweet :author)
-               (or (getf tweet :created) "(n/a)"))))
+               (or (getf tweet :created) "(n/a)"))
+    (debug-log "url: ~A" (tweet-url tweet))))
 
 (defun display-tweet (tweet remaining &key with-author)
   "Prints TWEET then REMAINING on the last line.
