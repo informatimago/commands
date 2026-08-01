@@ -57,6 +57,13 @@ those of mid-2026.
    billing and, if available, set a monthly spending cap.  (The old
    Free tier is essentially write-only: it cannot read timelines.)
 
+
+#+begin_quote
+account name: ogamita
+description: I am building a small personal command-line tool, for my own individual use only, that reads my own account's reverse-chronological home ("Following") timeline and, occasionally, the replies that make up a thread I am reading (via recent search). The tool displays one tweet at a time in my terminal, in chronological order. Requests are low volume: at most one timeline request every 15 minutes, authenticated with my own account's OAuth user context. Tweet texts are cached briefly in a local file on my personal computer, only until read, and are never republished, shared with third parties, aggregated, analyzed, used for moderation or advertising, or used to train any model. No content is posted, no other user's data is collected, and no automation acts on the account.
+check boxes, submit -> Failed to create account. Please try again.
+#+end_quote
+
 ** Create a Project and an App
 
 1. In the developer portal dashboard, create a *Project*, and inside
