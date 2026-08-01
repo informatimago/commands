@@ -255,6 +255,11 @@
   #+sbcl (sb-ext:save-lisp-and-die (program-pathname program-name release-directory)
                                    :executable t
                                    :compression 9
+                                   ;; Pass every command-line argument to the
+                                   ;; toplevel: without this, the SBCL runtime
+                                   ;; intercepts --version, --help, --core, etc.
+                                   ;; before the dispatched command sees them.
+                                   :save-runtime-options t
                                    :toplevel (make-toplevel-function main-function init-file))
 
   #-(or ccl clisp ecl sbcl) (not-implemented-yet 'generate-program))
