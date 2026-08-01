@@ -275,15 +275,23 @@ from the current top of the timeline).
 
 * Usage
 
-| Invocation           | Effect                                                          |
-|----------------------+-----------------------------------------------------------------|
-| =next-tweet=         | Prints the next tweet, then the remaining count on the last line |
-| =next-tweet --peek=  | Same, without consuming the tweet                               |
-| =next-tweet --count= | Prints only the remaining count of the current context          |
-| =next-tweet --enter= | Enters the thread of the last displayed tweet; prints its length |
-| =next-tweet --leave= | Returns to the timeline; prints its remaining count             |
-| =next-tweet --status= | Prints configuration, context, queue lengths, since-id, last fetch |
-| =next-tweet --help=  | Prints the documentation                                        |
+| Invocation             | Effect                                                          |
+|------------------------+-----------------------------------------------------------------|
+| =next-tweet=           | Prints the next tweet, then the remaining count on the last line |
+| =next-tweet --peek=    | Same, without consuming the tweet                              |
+| =next-tweet --previous= | Re-prints the last displayed tweet (no fetch, no consume)      |
+| =next-tweet --count=   | Prints only the remaining count of the current context         |
+| =next-tweet --enter=   | Enters the thread of the last displayed tweet; prints its length |
+| =next-tweet --leave=   | Returns to the timeline; prints its remaining count            |
+| =next-tweet --status=  | Prints configuration, context, queue lengths, since-id, last fetch |
+| =next-tweet --debug=   | Dumps requests, responses and identifiers to stderr (any action) |
+| =next-tweet -h --help= | Prints the option list and the documentation                   |
+| =next-tweet -V --version= | Prints the command version                                  |
+
+=--previous= is useful to look at the last tweet again, or to
+re-obtain its identifiers for a report: =next-tweet --debug --previous=
+prints, on stderr, the account and self user-id, and the tweet's id,
+conversation/thread id and author.
 
 A thread reading session:
 

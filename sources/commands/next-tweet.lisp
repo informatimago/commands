@@ -55,6 +55,10 @@
 ;;;;                        default behavior, but without consuming the
 ;;;;                        tweet.
 ;;;;
+;;;;        --previous      Re-prints the last displayed tweet (no
+;;;;                        fetch, no consume), for instance to report
+;;;;                        it or re-run with --debug.
+;;;;
 ;;;;        --status        Prints the configuration, queue length,
 ;;;;                        since-id and last fetch time.
 ;;;;
@@ -1065,11 +1069,31 @@ Returns two values: the new queue and the new state."
               (setf state (state-put state :since-id newest-id)))
             (values (append queue tweets) state))))))
 
+(defun debug-context (state)
+  "When --debug is set, prints the backend and the identifiers of the
+account, useful to report data to X."
+  (when (config :debug)
+    (debug-log "backend: ~(~A~)  account: ~A  self user-id: ~A"
+               (backend)
+               (or (config :account) "(any)")
+               (or (getf state :user-id) "(unknown)"))))
+
+(defun debug-tweet (tweet)
+  "When --debug is set, prints the identifiers of TWEET (tweet id,
+conversation/thread id, author), useful to report it to X."
+  (when (and tweet (config :debug))
+    (debug-log "tweet id: ~A  conversation/thread id: ~A  author: @~A  created: ~A"
+               (getf tweet :id)
+               (getf tweet :conversation)
+               (getf tweet :author)
+               (or (getf tweet :created) "(n/a)"))))
+
 (defun display-tweet (tweet remaining &key with-author)
   "Prints TWEET then REMAINING on the last line.
 When WITH-AUTHOR (thread reading), the author is printed on its own
 first line, before the tweet text.  Otherwise, the author is prefixed
 inline only when :show-author is set in the configuration."
+  (debug-tweet tweet)
   (when tweet
     (cond
       ((and with-author (getf tweet :author))
@@ -1091,8 +1115,10 @@ returns the exit status."
           ;; Reading a thread:
           (let* ((queue (load-thread-queue))
                  (tweet (first queue)))
+            (debug-context state)
             (when tweet
-              (setf state (state-put state :last-tweet tweet))
+              (setf state (state-put (state-put state :last-tweet tweet)
+                                     :last-with-author t))
               (when consume
                 (save-thread-queue (rest queue)))
               (save-state state))
@@ -1103,14 +1129,38 @@ returns the exit status."
             (display-tweet tweet (length (rest queue)) :with-author t))
           ;; Reading the timeline:
           (multiple-value-bind (queue state) (refill-queue (load-queue) state)
+            (debug-context state)
             (let ((tweet (first queue)))
               (when tweet
-                (setf state (state-put state :last-tweet tweet)))
+                (setf state (state-put (state-put state :last-tweet tweet)
+                                       :last-with-author nil)))
               ;; Always save the queue: the refill may have fetched new
               ;; tweets, which must be kept even when not consuming:
               (save-queue (if (and tweet consume) (rest queue) queue))
               (save-state state)
               (display-tweet tweet (length (rest queue))))))))
+  ex-ok)
+
+(defun previous-tweet ()
+  "Re-displays the last displayed tweet (as recorded in the state) with
+the current remaining count, without fetching or consuming.  Useful to
+report a tweet or re-run it with --debug."
+  (with-file-lock ()
+    (let* ((state (load-state))
+           (last  (getf state :last-tweet)))
+      (debug-context state)
+      (when (config :debug)
+        (debug-log "previous tweet record: ~S" last))
+      (if last
+          (display-tweet last
+                         (length (if (getf state :context)
+                                     (load-thread-queue)
+                                     (load-queue)))
+                         :with-author (getf state :last-with-author))
+          (progn
+            (format *error-output* "~A: no previous tweet.~%" *program-name*)
+            (format t "0~%")
+            (finish-output)))))
   ex-ok)
 
 (defun enter-thread ()
@@ -1122,6 +1172,7 @@ prints 0."
   (with-file-lock ()
     (let* ((state (load-state))
            (last  (getf state :last-tweet)))
+      (debug-context state)
       (if (null last)
           (progn
             (format *error-output* "~A: no current tweet; read a tweet first.~%"
@@ -1129,6 +1180,9 @@ prints 0."
             (format t "0~%"))
           (let* ((conversation-id (or (getf last :conversation) (getf last :id)))
                  (tweets          (thread-fetch last)))
+            (when (config :debug)
+              (debug-log "entering thread: conversation/thread id: ~A  focal tweet id: ~A  author: @~A"
+                         conversation-id (getf last :id) (getf last :author)))
             (if tweets
                 (progn
                   (save-thread-queue tweets)
@@ -1207,6 +1261,9 @@ in the timeline queue."
          (option ("--peek") ()
                  "Print the next tweet and the remaining count, but without consuming the tweet."
                  (setf *action* :peek))
+         (option ("--previous") ()
+                 "Re-print the last displayed tweet (no fetch, no consume); handy to report it or re-run with --debug."
+                 (setf *action* :previous))
          (option ("--count") ()
                  "Print only the number of tweets remaining in the current context (no fetch, no consume)."
                  (setf *action* :count))
@@ -1227,12 +1284,13 @@ in the timeline queue."
 
 (defun perform-action ()
   (ecase *action*
-    (:next   (next-tweet))
-    (:peek   (next-tweet :consume nil))
-    (:count  (print-count))
-    (:status (print-status))
-    (:enter  (enter-thread))
-    (:leave  (leave-thread))))
+    (:next     (next-tweet))
+    (:peek     (next-tweet :consume nil))
+    (:previous (previous-tweet))
+    (:count    (print-count))
+    (:status   (print-status))
+    (:enter    (enter-thread))
+    (:leave    (leave-thread))))
 
 (defun main (arguments)
   (setf *action* :next)
