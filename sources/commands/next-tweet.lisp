@@ -36,13 +36,20 @@
 ;;;;                         readme).  Credentials: two cookies (see
 ;;;;                         below).
 ;;;;
-;;;;    Options:
+;;;;    Options (parsed with the standard framework option machinery,
+;;;;    so -h/--help and -V/--version work as for the other commands):
 ;;;;
-;;;;        --help          Prints this documentation.
+;;;;        -h --help       Prints the option list and this documentation.
+;;;;
+;;;;        -V --version    Prints the command version and exits.
+;;;;
+;;;;        --debug         Dumps the backend requests and responses to
+;;;;                        the standard error output (to diagnose API
+;;;;                        errors).  May be combined with any action.
 ;;;;
 ;;;;        --count         Prints only the number of tweets remaining
-;;;;                        in the local queue (doesn't consume, doesn't
-;;;;                        fetch).
+;;;;                        in the current context (doesn't consume,
+;;;;                        doesn't fetch).
 ;;;;
 ;;;;        --peek          Prints the next tweet and count like the
 ;;;;                        default behavior, but without consuming the
@@ -161,8 +168,23 @@
 (in-package "SCRIPT")
 
 (command :use-systems (:babel :cl-base64 :drakma :ironclad :split-sequence :yason)
-         :documentation "Prints the text of the next unread tweet of the X home timeline,
-and on the last line, the number of tweets remaining to be read (0 if none).")
+         :version "1.1.0"
+         :documentation "
+Prints the text of the next unread tweet of the X (Twitter) \"Following\"
+(reverse chronological home) timeline, and on the last line, the number
+of tweets remaining to be read (0, alone, when there is none).
+
+Tweets are buffered in a local queue; the backend (:api, the official
+X API v2, or :web, the X web client GraphQL) is queried only when the
+queue is empty and at most once every :fetch-interval seconds, so the
+command is safe to call from a shell prompt.
+
+Configuration: ~/.config/next-tweet/config.lisp (see the source header
+and next-tweet-readme.org).  Credentials: ~/.authinfo.
+
+With no option, prints (and consumes) the next tweet.  --enter switches
+to the thread of the last displayed tweet; --leave returns to the
+timeline.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -234,6 +256,23 @@ user home directory; otherwise return it as a pathname."
 
 (defun config (key)
   (getf *configuration* key))
+
+(defun debug-log (control &rest arguments)
+  "When the :debug configuration flag (or --debug) is set, prints a
+formatted message to *ERROR-OUTPUT*."
+  (when (config :debug)
+    (format *error-output* "~&;; [next-tweet] ~?~%" control arguments)
+    (finish-output *error-output*)))
+
+(defun redact (value)
+  "Returns a short, non-revealing representation of a secret VALUE, for
+debug output."
+  (let ((string (princ-to-string (or value ""))))
+    (if (< 10 (length string))
+        (format nil "~A…~A [~D chars]"
+                (subseq string 0 3) (subseq string (- (length string) 3))
+                (length string))
+        "…")))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -503,6 +542,9 @@ and returns the response JSON parsed by YASON (hash-tables)."
                                                  (oauth-encode (cdr parameter))))
                                        query-parameters))
                        url)))
+    (when (config :debug)
+      (debug-log "api GET ~A" full-url)
+      (debug-log "  authorization: ~A" (redact auth)))
     (multiple-value-bind (body status)
         (drakma:http-request full-url
                              :method :get
@@ -512,6 +554,9 @@ and returns the response JSON parsed by YASON (hash-tables)."
       (let ((text (if (stringp body)
                       body
                       (babel:octets-to-string body :encoding :utf-8))))
+        (when (config :debug)
+          (debug-log "  HTTP ~A, ~D bytes" status (length text))
+          (debug-log "  response: ~A" text))
         (if (= 200 status)
             (yason:parse text)
             (error 'api-error :status status :message text))))))
@@ -718,35 +763,38 @@ de-duplicated by id."
 (defun web-get (url query-parameters)
   "Performs a GET request on URL with the web session credentials, and
 returns the response JSON parsed by YASON as alists (objects) and lists
-(arrays), preserving order."
+(arrays), preserving order.  QUERY-PARAMETERS is an alist of (name .
+value) strings; drakma percent-encodes them (so the JSON variables and
+features are encoded exactly once)."
   (let* ((credentials (web-credentials))
-         (full-url (if query-parameters
-                       (format nil "~A?~{~A~^&~}"
-                               url
-                               (mapcar (lambda (parameter)
-                                         (concat (oauth-encode (car parameter))
-                                                 "="
-                                                 (oauth-encode (cdr parameter))))
-                                       query-parameters))
-                       url)))
+         (headers (list (cons "authorization" (concat "Bearer " *web-bearer*))
+                        (cons "x-csrf-token"  (getf credentials :ct0))
+                        (cons "x-twitter-active-user" "yes")
+                        (cons "x-twitter-auth-type"   "OAuth2Session")
+                        (cons "x-twitter-client-language" "en")
+                        (cons "cookie" (format nil "auth_token=~A; ct0=~A"
+                                               (getf credentials :auth-token)
+                                               (getf credentials :ct0))))))
+    (when (config :debug)
+      (debug-log "web GET ~A" url)
+      (dolist (parameter query-parameters)
+        (debug-log "  ~A = ~A" (car parameter) (cdr parameter)))
+      (debug-log "  auth_token: ~A  ct0: ~A"
+                 (redact (getf credentials :auth-token))
+                 (redact (getf credentials :ct0))))
     (multiple-value-bind (body status)
-        (drakma:http-request
-         full-url
-         :method :get
-         :additional-headers
-         (list (cons "authorization" (concat "Bearer " *web-bearer*))
-               (cons "x-csrf-token"  (getf credentials :ct0))
-               (cons "x-twitter-active-user" "yes")
-               (cons "x-twitter-auth-type"   "OAuth2Session")
-               (cons "x-twitter-client-language" "en")
-               (cons "cookie" (format nil "auth_token=~A; ct0=~A"
-                                      (getf credentials :auth-token)
-                                      (getf credentials :ct0))))
-         :user-agent "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
-         :external-format-in :utf-8)
+        (drakma:http-request url
+                             :method :get
+                             :parameters query-parameters
+                             :additional-headers headers
+                             :user-agent "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+                             :external-format-in :utf-8)
       (let ((text (if (stringp body)
                       body
                       (babel:octets-to-string body :encoding :utf-8))))
+        (when (config :debug)
+          (debug-log "  HTTP ~A, ~D bytes" status (length text))
+          (debug-log "  response: ~A" text))
         (if (= 200 status)
             (let ((yason:*parse-object-as* :alist)
                   (yason:*parse-object-key-fn* (function identity)))
@@ -1101,37 +1149,61 @@ in the timeline queue."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; Main.
+;;; Options and main.
 ;;;
 
+(defvar *action* :next
+  "The action selected by the command-line options: one of :NEXT,
+:PEEK, :COUNT, :STATUS, :ENTER, :LEAVE.")
+
+(options "next-tweet"
+         (option ("--peek") ()
+                 "Print the next tweet and the remaining count, but without consuming the tweet."
+                 (setf *action* :peek))
+         (option ("--count") ()
+                 "Print only the number of tweets remaining in the current context (no fetch, no consume)."
+                 (setf *action* :count))
+         (option ("--status") ()
+                 "Print the configuration, reading context, queue lengths, since-id and last fetch time."
+                 (setf *action* :status))
+         (option ("--enter") ()
+                 "Enter the thread of the last displayed tweet; the following calls read that thread."
+                 (setf *action* :enter))
+         (option ("--leave") ()
+                 "Return to the main Following timeline (its queue and since-id are preserved)."
+                 (setf *action* :leave))
+         (option ("--debug") ()
+                 "Dump the backend requests and responses to the standard error output."
+                 (setf *configuration* (list* :debug t *configuration*)))
+         (standard-options)
+         (bash-completion-options))
+
+(defun perform-action ()
+  (ecase *action*
+    (:next   (next-tweet))
+    (:peek   (next-tweet :consume nil))
+    (:count  (print-count))
+    (:status (print-status))
+    (:enter  (enter-thread))
+    (:leave  (leave-thread))))
+
 (defun main (arguments)
+  (setf *action* :next)
   (handler-case
       (progn
         (load-configuration)
-        (cond
-          ((member "--help" arguments :test (function string=))
-           (format t "~A~%" (command-documentation (command-named *program-name*)))
-           (format t "Usage: ~A [--help|--count|--peek|--status|--enter|--leave]~%"
-                   *program-name*)
-           ex-ok)
-          ((member "--count"  arguments :test (function string=)) (print-count))
-          ((member "--status" arguments :test (function string=)) (print-status))
-          ((member "--enter"  arguments :test (function string=)) (enter-thread))
-          ((member "--leave"  arguments :test (function string=)) (leave-thread))
-          ((member "--peek"   arguments :test (function string=)) (next-tweet :consume nil))
-          (arguments
-           (format *error-output* "~A: invalid arguments: ~{~A~^ ~}~%"
-                   *program-name* arguments)
-           ex-usage)
-          (t (next-tweet))))
+        (let ((status (parse-options *command* arguments)))
+          (if (zerop status)
+              (perform-action)
+              status)))
     (api-error (err)
       ;; Print 0 on stdout so a shell prompt degrades gracefully:
-      (format *error-output* "~A: ~A~%" *program-name* err)
+      (perror "~A~%" err)
       (format t "0~%")
       (finish-output)
       ex-unavailable)
     (error (err)
-      (format *error-output* "~A: ~A~%" *program-name* err)
+      (perror "~A~%" err)
       (format t "0~%")
       (finish-output)
       ex-software)))
