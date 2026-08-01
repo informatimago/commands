@@ -137,6 +137,7 @@ browser as described below.
 1. Log in to [[https://x.com/]] in a browser.
 2. Open the developer tools (=F12=) > /Application/ (Chrome) or
    /Storage/ (Firefox) > /Cookies/ > =https://x.com=.
+   /Developer/ -> /Show Page Resources/ -> /Storage tab/ -> /Cookie page/ (Safari)
 3. Copy the values of the =auth_token= and =ct0= cookies.
 
 Store them in =~/.authinfo= (see the configuration section):
@@ -158,6 +159,7 @@ app.  To find them:
 
 1. On [[https://x.com/home]], select the /Following/ tab.
 2. In the developer tools /Network/ tab, filter on =graphql=.
+   /Developer/ -> /Show Page Resources/ -> /Network tab/ (Safari)
 3. The request named =HomeLatestTimeline= has a URL of the form
    =https://x.com/i/api/graphql/<QUERYID>/HomeLatestTimeline=.  Copy
    =<QUERYID>= into =:web-query-id-home=.
@@ -177,7 +179,7 @@ otherwise a built-in default is used, which may become stale.
  :machine            "api.x.com"
  :web-base           "https://x.com/i/api/graphql"
  :web-query-id-home   "u5oAc2ftIF2y3Tnf2yefGw"   ; refresh from the browser
- :web-query-id-detail "xd_EMdYvB9hfZsZ6Idri0w"   ; refresh from the browser
+ :web-query-id-detail "559hs_YZNV4IgA3Z6zIIuw"   ; refresh from the browser
  :page-size          20
  :fetch-interval     900
  :state-directory    "~/.cache/next-tweet/")
