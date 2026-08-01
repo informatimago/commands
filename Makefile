@@ -49,6 +49,7 @@ ALL_PROGRAMS=   \
 	merge \
 	mfod \
 	new-password \
+	next-tweet \
 	nls \
 	one-of \
 	pic-resize \

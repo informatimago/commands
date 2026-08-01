@@ -1,0 +1,240 @@
+#+TITLE: next-tweet — reading the X "Following" timeline from the shell
+#+AUTHOR: Pascal J. Bourguignon
+#+DATE: 2026-08-01
+#+OPTIONS: toc:2 num:t
+
+* Overview
+
+=next-tweet= prints the text of the next unread tweet of the X
+(Twitter) "Following" (reverse chronological home) timeline, followed
+on the last line by the number of tweets remaining to be read.  When
+there is no new tweet, it prints just =0=.
+
+#+begin_example
+$ next-tweet
+Just released a new version of my library, with a 3× faster reader.
+7
+$ next-tweet
+0
+#+end_example
+
+Tweets are fetched from the official X API v2, and buffered in a
+local queue; the API is only queried when the queue is empty, and at
+most once every =:fetch-interval= seconds, so the command can safely
+be called from a shell prompt.
+
+Threads: when the displayed tweet is the head (or a part) of a
+thread, =next-tweet --enter= switches the reading context to that
+thread (the self-replies of its author, in chronological order), and
+=next-tweet --leave= returns to the timeline, which is preserved
+meanwhile.
+
+* Requirements
+
+- The =next-tweet= command built from
+  [[https://gitlab.com/informatimago/commands]] (systems: babel,
+  cl-base64, drakma, ironclad, split-sequence, yason).
+- An X account (the one whose Following timeline will be read).
+- An X developer account with API v2 read access (see below).
+  Reading via the API is /paid/ (pay-per-request billing for new
+  developer accounts since 2026); one request returns up to
+  =:page-size= (≤ 100) tweets, and =next-tweet= performs at most one
+  refill every =:fetch-interval= seconds, so the cost is of the order
+  of a few cents per day.
+
+* Creating the X API credentials
+
+The X developer portal UI changes regularly; the names below are
+those of mid-2026.
+
+** Create a developer account
+
+1. Go to [[https://developer.x.com/]] and sign in with the X account
+   whose timeline you want to read.
+2. Sign up for the developer platform, and accept the developer
+   agreement.
+3. New accounts are billed per request ("credits"): configure the
+   billing and, if available, set a monthly spending cap.  (The old
+   Free tier is essentially write-only: it cannot read timelines.)
+
+** Create a Project and an App
+
+1. In the developer portal dashboard, create a *Project*, and inside
+   it an *App* (v2 endpoints only work for Apps attached to a
+   Project).
+2. In the App settings, open *User authentication settings* and:
+   - enable *OAuth 1.0a*,
+   - set *App permissions* to *Read*,
+   - fill the required *Callback URI* and *Website URL* fields with
+     any URL (e.g. =http://localhost/=); they are not used by
+     =next-tweet=.
+
+** Generate the four secrets
+
+In the App's *Keys and tokens* tab, =next-tweet= needs the four
+OAuth 1.0a user-context secrets:
+
+| Portal name                    | .authinfo entry suffix |
+|--------------------------------+------------------------|
+| API Key (Consumer Key)         | =consumer-key=         |
+| API Key Secret                 | =consumer-secret=      |
+| Access Token                   | =access-token=         |
+| Access Token Secret            | =access-secret=        |
+
+1. Under *Consumer Keys*, generate (or regenerate) the *API Key and
+   Secret*, and save both.
+2. Under *Authentication Tokens*, generate the *Access Token and
+   Secret* /for your own account/.  Do this *after* setting the App
+   permissions: the tokens are stamped with the permissions in force
+   when they are created (the portal shows e.g. "Created with Read
+   permissions").  If you change the permissions later, regenerate
+   the tokens.
+
+Each secret is only displayed once; store them immediately in
+=~/.authinfo= (next section).
+
+* Configuration
+
+** ~/.authinfo
+
+Store the four secrets in =~/.authinfo= (netrc format, the same file
+used by Emacs), one machine entry per secret, using the configured
+=:machine= (default =api.x.com=) as prefix, and your X username as
+login:
+
+#+begin_example
+machine api.x.com/consumer-key    login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com/consumer-secret login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com/access-token    login informatimago password XXXXXXXXXXXXXXXX
+machine api.x.com/access-secret   login informatimago password XXXXXXXXXXXXXXXX
+#+end_example
+
+Make the file private:
+
+#+begin_src sh
+chmod 600 ~/.authinfo
+#+end_src
+
+Notes:
+
+- Passwords containing spaces may be written between double quotes.
+- Encrypted =~/.authinfo.gpg= is /not/ read; use the
+  =NEXT_TWEET_AUTHINFO= environment variable to point to an
+  alternate plain file if needed.
+
+** ~/.config/next-tweet/config.lisp
+
+The configuration file is a Lisp property list:
+
+#+begin_src lisp
+;; -*- mode:lisp -*-
+(:account         "informatimago"       ; login to match in ~/.authinfo
+ :machine         "api.x.com"           ; machine prefix in ~/.authinfo
+ :api-base        "https://api.x.com"   ; API endpoint base URL
+ :page-size       100                   ; tweets per API request (5-100)
+ :max-pages       1                     ; max API requests per refill
+ :fetch-interval  900                   ; min. seconds between API calls
+ :show-author     nil                   ; when true, prefix "@author: "
+ :state-directory "~/.cache/next-tweet/")
+#+end_src
+
+All keys are optional; the values above are the defaults (except
+=:account=, which you should set).  =:fetch-interval= directly
+controls the API cost: with 900, at most 4 requests (up to 400
+tweets) per hour.
+
+The =NEXT_TWEET_CONFIG= environment variable selects an alternate
+configuration file, so several X accounts can be used, each with its
+own state directory:
+
+#+begin_src sh
+NEXT_TWEET_CONFIG=~/.config/next-tweet/other-account.lisp next-tweet
+#+end_src
+
+** State
+
+The queue and cursors are kept per account under
+=:state-directory/<account>/=: =queue.lisp= (timeline queue),
+=thread-queue.lisp= (current thread), =state.lisp= (since-id, user
+id, last fetch time, last displayed tweet, reading context).
+Deleting the directory resets the reader (the next refill restarts
+from the current top of the timeline).
+
+* Usage
+
+| Invocation           | Effect                                                          |
+|----------------------+-----------------------------------------------------------------|
+| =next-tweet=         | Prints the next tweet, then the remaining count on the last line |
+| =next-tweet --peek=  | Same, without consuming the tweet                               |
+| =next-tweet --count= | Prints only the remaining count of the current context          |
+| =next-tweet --enter= | Enters the thread of the last displayed tweet; prints its length |
+| =next-tweet --leave= | Returns to the timeline; prints its remaining count             |
+| =next-tweet --status= | Prints configuration, context, queue lengths, since-id, last fetch |
+| =next-tweet --help=  | Prints the documentation                                        |
+
+A thread reading session:
+
+#+begin_example
+$ next-tweet
+1/7 Why the Common Lisp condition system is not just exceptions — a thread.
+12
+$ next-tweet --enter
+6
+$ next-tweet
+2/7 First, handlers run in the dynamic context of the signal…
+5
+…
+$ next-tweet --leave
+12
+#+end_example
+
+Notes:
+
+- =--enter= applies to the /last displayed/ tweet (shown by a plain
+  call or by =--peek=).
+- Threads are fetched with the recent search API, which only covers
+  the last 7 days; entering an older thread prints =0= and stays on
+  the timeline.
+- At the end of a thread, =next-tweet= prints =0= (and a reminder on
+  stderr) until =--leave= is called.
+- Convenient aliases: =alias enter-thread='next-tweet --enter'= and
+  =alias leave-thread='next-tweet --leave'=.
+
+** In the shell prompt
+
+Errors (network, API…) print =0= on stdout and the diagnostic on
+stderr, so the prompt degrades gracefully:
+
+#+begin_src sh
+# ~/.bashrc
+PS1='$(next-tweet 2>/dev/null)\n\u@\h:\w$ '
+#+end_src
+
+** From Common Lisp
+
+#+begin_src lisp
+(uiop:run-program "next-tweet" :output :string :ignore-error-status t)
+#+end_src
+
+or, within the =commands= image, call
+=(command.next-tweet::main '())= directly.
+
+* Troubleshooting
+
+- *401 Unauthorized* :: Wrong or stale secrets.  Check the four
+  =~/.authinfo= entries (machine prefix and login must match
+  =:machine= and =:account=), and regenerate the Access Token if the
+  App permissions changed after its creation.  Also check the system
+  clock: OAuth 1.0a signatures embed a timestamp.
+- *403 Forbidden* :: The App is not attached to a Project, or the
+  account has no read access (billing not configured).
+- *429 Too Many Requests* :: Rate limit or spending cap reached;
+  =next-tweet= prints =0= and retries after =:fetch-interval=.
+- *Tweets are skipped* :: More than =:page-size= × =:max-pages=
+  tweets arrived between two refills; only the most recent ones are
+  fetched.  Increase =:max-pages= (each page is a billed request) or
+  decrease =:fetch-interval=.
+- *--enter prints 0* :: The tweet has no self-replies, or the thread
+  is older than 7 days (recent search limitation).
+
+# next-tweet-readme.org ends here.

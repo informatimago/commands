@@ -108,6 +108,7 @@
     "html-make-image-index" "insulte" "kwic" "lc" "llen"
     "lrev" "macosx-port-uninstall-recursively" "memo"
     "menu" "merge" "mfod" "new-password"
+    "next-tweet"
     "nls" "one-of" "pic-resize" "pjb-diff" "programmer"
     "pseudo-pop" "radio" "random"
     "religion" "remove-duplicate-files" "revlines"
