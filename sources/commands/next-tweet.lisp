@@ -569,6 +569,13 @@ and returns the response JSON parsed by YASON (hash-tables)."
           keys
           :initial-value object))
 
+(defun api-tweet-text (tweet)
+  "Returns the complete text of an API v2 TWEET hash-table, preferring
+the note_tweet full text (long-form tweets, requested via the
+note_tweet field) over the possibly-truncated text field."
+  (or (ref tweet "note_tweet" "text")
+      (gethash "text" tweet)))
+
 (defun fetch-user-id (credentials)
   "Returns the id (a string) of the authenticated user."
   (or (ref (api-get "/2/users/me" '() credentials) "data" "id")
@@ -590,7 +597,7 @@ to newest, and the new since-id."
                                        (princ-to-string
                                         (min 100 (max 5 (config :page-size)))))
                                  (cons "expansions"   "author_id")
-                                 (cons "tweet.fields" "created_at,author_id,conversation_id")
+                                 (cons "tweet.fields" "created_at,author_id,conversation_id,note_tweet")
                                  (cons "user.fields"  "username"))
                            (when since-id
                              (list (cons "since_id" since-id)))
@@ -606,7 +613,7 @@ to newest, and the new since-id."
                           :author       (gethash (gethash "author_id" tweet) users)
                           :conversation (gethash "conversation_id" tweet)
                           :created      (gethash "created_at" tweet)
-                          :text         (gethash "text" tweet))
+                          :text         (api-tweet-text tweet))
                     tweets))
             (let ((meta-newest (ref response "meta" "newest_id")))
               (when (and meta-newest
@@ -636,7 +643,7 @@ tweet plists sorted from oldest to newest."
                                  (cons "max_results"
                                        (princ-to-string
                                         (min 100 (max 10 (config :page-size)))))
-                                 (cons "tweet.fields" "created_at,author_id,conversation_id")
+                                 (cons "tweet.fields" "created_at,author_id,conversation_id,note_tweet")
                                  (cons "expansions"   "author_id")
                                  (cons "user.fields"  "username"))
                            (when after-id
@@ -653,7 +660,7 @@ tweet plists sorted from oldest to newest."
                           :author       (gethash (gethash "author_id" tweet) users)
                           :conversation (gethash "conversation_id" tweet)
                           :created      (gethash "created_at" tweet)
-                          :text         (gethash "text" tweet))
+                          :text         (api-tweet-text tweet))
                     tweets))
             (setf pagination-token (ref response "meta" "next_token")))
       :while pagination-token)
@@ -722,30 +729,70 @@ old (legacy) and new (core) user schemas."
     (or (aget (aget user "legacy") "screen_name")
         (aget (aget user "core") "screen_name"))))
 
+(defun tweet-node (result)
+  "Unwraps a tweet result node: a plain Tweet is returned as is; a
+TweetWithVisibilityResults is unwrapped to its inner tweet."
+  (if (and (json-object-p result)
+           (equal (aget result "__typename") "TweetWithVisibilityResults"))
+      (aget result "tweet")
+      result))
+
+(defun tweet-full-text (node)
+  "Returns the complete text of the tweet NODE, undoing X's truncation:
+long-form \"note\" tweets carry the full text in note_tweet, and
+retweets carry it in the retweeted status (their legacy full_text is
+cut off with a t.co link)."
+  (let* ((legacy    (aget node "legacy"))
+         (note-text (aget (aget (aget (aget node "note_tweet")
+                                      "note_tweet_results")
+                                "result")
+                          "text"))
+         (retweet   (tweet-node (aget (aget legacy "retweeted_status_result")
+                                      "result"))))
+    (cond
+      (retweet
+       (format nil "RT @~A: ~A"
+               (tweet-result-screen-name retweet)
+               (tweet-full-text retweet)))
+      ((and note-text (plusp (length note-text)))
+       note-text)
+      (t
+       (or (aget legacy "full_text") (aget legacy "text") "")))))
+
 (defun collect-web-tweets (json)
-  "Walks the parsed GraphQL JSON and returns the list of tweet plists it
-contains (in document order, i.e. newest first for a timeline),
-de-duplicated by id."
+  "Traverses the parsed GraphQL JSON and returns the list of tweet plists
+it contains, in document order (newest first for a timeline),
+de-duplicated by id.  Nested tweets (the quoted or retweeted status
+inside a tweet) are NOT collected as separate entries; the retweeted
+text is instead folded into the enclosing retweet's text, and the full
+text of long-form tweets is resolved."
   (let ((tweets '())
         (seen   (make-hash-table :test (function equal))))
-    (json-walk
-     json
-     (lambda (node)
-       (when (and (json-object-p node)
-                  (equal (aget node "__typename") "Tweet")
-                  (aget node "rest_id")
-                  (aget node "legacy"))
-         (let* ((id     (aget node "rest_id"))
-                (legacy (aget node "legacy")))
-           (unless (gethash id seen)
-             (setf (gethash id seen) t)
-             (push (list :id           id
-                         :author       (tweet-result-screen-name node)
-                         :conversation (aget legacy "conversation_id_str")
-                         :created      (aget legacy "created_at")
-                         :text         (or (aget legacy "full_text")
-                                           (aget legacy "text")))
-                   tweets))))))
+    (labels ((walk (node)
+               (cond
+                 ((and (json-object-p node)
+                       (equal (aget node "__typename") "Tweet")
+                       (aget node "rest_id")
+                       (aget node "legacy"))
+                  (let ((id     (aget node "rest_id"))
+                        (legacy (aget node "legacy")))
+                    (unless (gethash id seen)
+                      (setf (gethash id seen) t)
+                      (push (list :id           id
+                                  :author       (tweet-result-screen-name node)
+                                  :conversation (aget legacy "conversation_id_str")
+                                  :created      (aget legacy "created_at")
+                                  :text         (tweet-full-text node))
+                            tweets)))
+                  ;; Prune: do not descend into this tweet's nested
+                  ;; quoted/retweeted tweets (they are not separate
+                  ;; timeline entries).
+                  )
+                 ((json-object-p node)
+                  (dolist (pair node) (walk (cdr pair))))
+                 ((consp node)
+                  (dolist (element node) (walk element))))))
+      (walk json))
     (nreverse tweets)))
 
 (defun collect-bottom-cursor (json)

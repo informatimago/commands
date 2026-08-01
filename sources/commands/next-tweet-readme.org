@@ -303,6 +303,11 @@ $ next-tweet --leave
 
 Notes:
 
+- The full text is always printed: long-form (\"note\") tweets, which
+  X truncates with a trailing =t.co= link, are shown in full, and a
+  retweet is shown as =RT @author: = followed by the complete text of
+  the retweeted tweet.  Nested quoted/retweeted tweets are not printed
+  as separate entries.
 - =--enter= applies to the /last displayed/ tweet (shown by a plain
   call or by =--peek=).
 - Each thread tweet is printed with its author on its own first
